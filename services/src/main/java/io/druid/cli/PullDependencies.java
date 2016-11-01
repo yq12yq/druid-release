@@ -135,7 +135,7 @@ public class PullDependencies implements Runnable
   );
 
   private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
-      "https://repo1.maven.org/maven2/", "http://nexus-private.hortonworks.com/nexus/content/groups/public",
+      "https://repo1.maven.org/maven2/", "http://nexus-private.hortonworks.com/nexus/content/groups/public", "http://nexus-private.hortonworks.com/nexus/content/groups/public",
       "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
   );
 
