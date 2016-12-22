@@ -4,7 +4,7 @@
 ## Runs druid nodes as a daemon
 ## Environment Variables used by this script -
 ## DRUID_LIB_DIR - directory having druid jar files, default=lib
-## DRUID_CONF_DIR - directory having druid config files, default=conf/druid
+## DRUID_CONF_DIR - directory having druid config files, default=conf
 ## DRUID_LOG_DIR - directory used to store druid logs, default=log
 ## DRUID_PID_DIR - directory used to store pid files, default=var/druid/pids
 ## HADOOP_CONF_DIR - directory used to store hadoop config files
@@ -22,7 +22,7 @@ shift
 command=$1
 
 LIB_DIR="${DRUID_LIB_DIR:=lib}"
-CONF_DIR="${DRUID_CONF_DIR:=conf/druid}"
+CONF_DIR="${DRUID_CONF_DIR:=conf}"
 LOG_DIR="${DRUID_LOG_DIR:=log}"
 PID_DIR="${DRUID_PID_DIR:=var/druid/pids}"
 
