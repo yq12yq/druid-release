@@ -29,6 +29,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -53,7 +54,7 @@ public class EventReceiverFirehoseTestClient
       String host,
       String chatID,
       ObjectMapper jsonMapper,
-      HttpClient httpClient,
+      @TestClient HttpClient httpClient,
       ObjectMapper smileMapper
   )
   {

@@ -17,31 +17,31 @@
  * under the License.
  */
 
-package io.druid.testing;
+package io.druid.security.kerberos;
 
-/**
- */
-public interface IntegrationTestingConfig
+public class RetryResponseHolder<T>
 {
-  public String getCoordinatorUrl();
+  private final boolean shouldRetry;
+  private final T obj;
 
-  public String getIndexerUrl();
+  public RetryResponseHolder(boolean shouldRetry, T obj)
+  {
+    this.shouldRetry = shouldRetry;
+    this.obj = obj;
+  }
 
-  public String getRouterUrl();
+  public static <T> RetryResponseHolder<T> retry()
+  {
+    return new RetryResponseHolder<T>(true, null);
+  }
 
-  public String getBrokerUrl();
+  public boolean shouldRetry()
+  {
+    return shouldRetry;
+  }
 
-  public String getHistoricalUrl();
-
-  public String getMiddleManagerHost();
-
-  public String getZookeeperHosts();
-
-  public String getKafkaHost();
-
-  public String getProperty(String prop);
-
-  String getUsername();
-
-  String getPassword();
+  public T getObj()
+  {
+    return obj;
+  }
 }
