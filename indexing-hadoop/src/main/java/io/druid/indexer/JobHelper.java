@@ -419,6 +419,7 @@ public class JobHelper
     switch (outputFS.getScheme()) {
       case "hdfs":
       case "viewfs":
+      case "s3a":
       case "gs":
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
@@ -575,9 +576,11 @@ public class JobHelper
       DataSegment segment
   )
   {
-    String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
-                        ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
-                        : DataSegmentPusherUtil.getStorageDir(segment);
+    String segmentDir =
+            "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
+                    || "s3a".equals(fileSystem.getScheme())
+                    ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
+                    : DataSegmentPusherUtil.getStorageDir(segment);
     return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
   }
 
