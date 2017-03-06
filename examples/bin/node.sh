@@ -6,7 +6,7 @@
 ## DRUID_LIB_DIR - directory having druid jar files, default=lib
 ## DRUID_CONF_DIR - directory having druid config files, default=conf
 ## DRUID_LOG_DIR - directory used to store druid logs, default=log
-## DRUID_PID_DIR - directory used to store pid files, default=var/druid/pids
+## DRUID_PID_DIR - directory used to store pid files, default=/var/run/druid
 ## HADOOP_CONF_DIR - directory used to store hadoop config files
 
 usage="Usage: node.sh nodeType (start|stop|status)"
@@ -24,7 +24,7 @@ command=$1
 LIB_DIR="${DRUID_LIB_DIR:=lib}"
 CONF_DIR="${DRUID_CONF_DIR:=conf}"
 LOG_DIR="${DRUID_LOG_DIR:=log}"
-PID_DIR="${DRUID_PID_DIR:=var/druid/pids}"
+PID_DIR="${DRUID_PID_DIR:=/var/run/druid}"
 
 pid=$PID_DIR/$nodeType.pid
 
