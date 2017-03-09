@@ -1226,7 +1226,9 @@ public class KafkaIndexTaskTest
 
     task.pause(0);
 
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+    while (!task.getStatus().equals(KafkaIndexTask.Status.PAUSED)) {
+      Thread.sleep(25);
+    }
   }
 
   private ListenableFuture<TaskStatus> runTask(final Task task)
