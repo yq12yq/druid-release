@@ -21,7 +21,6 @@ package io.druid.segment.column;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -31,10 +30,10 @@ import io.druid.segment.IdLookup;
 import io.druid.segment.data.CachingIndexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.ReadableOffset;
 import io.druid.segment.data.SingleIndexedInt;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.historical.HistoricalDimensionSelector;
-import io.druid.segment.historical.OffsetHolder;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
@@ -42,7 +41,7 @@ import java.io.IOException;
 import java.util.BitSet;
 
 /**
-*/
+ */
 public class SimpleDictionaryEncodedColumn
     implements DictionaryEncodedColumn<String>
 {
@@ -86,10 +85,10 @@ public class SimpleDictionaryEncodedColumn
   }
 
   @Override
+  @Nullable
   public String lookupName(int id)
   {
-    //Empty to Null will ensure that null and empty are equivalent for extraction function
-    return Strings.emptyToNull(cachedLookups.get(id));
+    return cachedLookups.get(id);
   }
 
   @Override
@@ -105,10 +104,7 @@ public class SimpleDictionaryEncodedColumn
   }
 
   @Override
-  public HistoricalDimensionSelector makeDimensionSelector(
-      final OffsetHolder offsetHolder,
-      final ExtractionFn extractionFn
-  )
+  public HistoricalDimensionSelector makeDimensionSelector(final ReadableOffset offset, final ExtractionFn extractionFn)
   {
     abstract class QueryableDimensionSelector implements HistoricalDimensionSelector, IdLookup
     {
@@ -158,7 +154,7 @@ public class SimpleDictionaryEncodedColumn
         @Override
         public IndexedInts getRow()
         {
-          return multiValueColumn.get(offsetHolder.getReadableOffset().getOffset());
+          return multiValueColumn.get(offset.getOffset());
         }
 
         @Override
@@ -183,8 +179,7 @@ public class SimpleDictionaryEncodedColumn
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("multiValueColumn", multiValueColumn);
-          inspector.visit("offsetHolder", offsetHolder);
-          inspector.visit("offset", offsetHolder.getReadableOffset());
+          inspector.visit("offset", offset);
           inspector.visit("extractionFn", extractionFn);
         }
       }
@@ -202,7 +197,7 @@ public class SimpleDictionaryEncodedColumn
         @Override
         public int getRowValue()
         {
-          return column.get(offsetHolder.getReadableOffset().getOffset());
+          return column.get(offset.getOffset());
         }
 
         @Override
@@ -273,8 +268,7 @@ public class SimpleDictionaryEncodedColumn
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("column", column);
-          inspector.visit("offsetHolder", offsetHolder);
-          inspector.visit("offset", offsetHolder.getReadableOffset());
+          inspector.visit("offset", offset);
           inspector.visit("extractionFn", extractionFn);
         }
       }

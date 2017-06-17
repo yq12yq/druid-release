@@ -19,7 +19,6 @@
 
 package io.druid.segment.virtual;
 
-import com.google.common.base.Strings;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.query.extraction.ExtractionFn;
@@ -29,6 +28,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
 public class ExpressionSelectors
 {
@@ -48,17 +48,23 @@ public class ExpressionSelectors
   public static LongColumnSelector makeLongColumnSelector(
       final ColumnSelectorFactory columnSelectorFactory,
       final Expr expression,
-      final long nullValue
+      final Long nullValue
   )
   {
     final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
     class ExpressionLongColumnSelector implements LongColumnSelector
     {
       @Override
-      public long get()
+      public long getLong()
       {
         final ExprEval exprEval = baseSelector.get();
         return exprEval.isNull() ? nullValue : exprEval.asLong();
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return baseSelector.get().isNull() && nullValue == null;
       }
 
       @Override
@@ -73,17 +79,23 @@ public class ExpressionSelectors
   public static FloatColumnSelector makeFloatColumnSelector(
       final ColumnSelectorFactory columnSelectorFactory,
       final Expr expression,
-      final float nullValue
+      final Float nullValue
   )
   {
     final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
     class ExpressionFloatColumnSelector implements FloatColumnSelector
     {
       @Override
-      public float get()
+      public float getFloat()
       {
         final ExprEval exprEval = baseSelector.get();
         return exprEval.isNull() ? nullValue : (float) exprEval.asDouble();
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return baseSelector.get().isNull() && nullValue == null;
       }
 
       @Override
@@ -98,17 +110,24 @@ public class ExpressionSelectors
   public static DoubleColumnSelector makeDoubleColumnSelector(
       ColumnSelectorFactory columnSelectorFactory,
       Expr expression,
-      double nullValue
+      Double nullValue
   )
   {
     final ExpressionObjectSelector baseSelector = ExpressionObjectSelector.from(columnSelectorFactory, expression);
     class ExpressionDoubleColumnSelector implements DoubleColumnSelector
     {
       @Override
-      public double get()
+      public double getDouble()
       {
         final Double number = baseSelector.get().asDouble();
         return number != null ? number.doubleValue() : nullValue;
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        final ExprEval exprEval = baseSelector.get();
+        return exprEval.isNull() && nullValue == null;
       }
 
       @Override
@@ -134,7 +153,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return Strings.emptyToNull(baseSelector.get().asString());
+          return NullHandlingHelper.defaultToNull(baseSelector.get().asString());
         }
 
         @Override
@@ -150,7 +169,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(Strings.emptyToNull(baseSelector.get().asString()));
+          return extractionFn.apply(NullHandlingHelper.defaultToNull(baseSelector.get().asString()));
         }
 
         @Override

@@ -28,8 +28,11 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -74,13 +77,18 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongMaxAggregator(getLongColumnSelector(metricFactory));
+    LongColumnSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    return NullHandlingHelper.getNullableAggregator(new LongMaxAggregator(longColumnSelector), longColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongMaxBufferAggregator(getLongColumnSelector(metricFactory));
+    LongColumnSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    return NullHandlingHelper.getNullableAggregator(
+        new LongMaxBufferAggregator(longColumnSelector),
+        longColumnSelector
+    );
   }
 
   private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
@@ -95,9 +103,44 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return LongMaxAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    LongAggregateCombiner combiner = new LongAggregateCombiner()
+    {
+      private long max;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        max = selector.getLong();
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        max = Math.max(max, selector.getLong());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return max;
+      }
+    };
+    return NullHandlingHelper.getNullableCombiner(combiner);
   }
 
   @Override
@@ -184,7 +227,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES;
+    return Longs.BYTES + NullHandlingHelper.extraAggregatorBytes();
   }
 
   @Override

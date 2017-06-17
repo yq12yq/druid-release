@@ -21,6 +21,7 @@ package io.druid.segment.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 /**
@@ -37,6 +38,7 @@ public class ColumnBuilder
   private Supplier<BitmapIndex> bitmapIndex = null;
   private Supplier<SpatialIndex> spatialIndex = null;
   private SmooshedFileMapper fileMapper = null;
+  private Supplier<ImmutableBitmap> nullValueBitmap = null;
 
   public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
   {
@@ -97,6 +99,12 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setNullValueBitmap(Supplier<ImmutableBitmap> nullValueBitmap)
+  {
+    this.nullValueBitmap = nullValueBitmap;
+    return this;
+  }
+
   public Column build()
   {
     Preconditions.checkState(type != null, "Type must be set.");
@@ -108,14 +116,14 @@ public class ColumnBuilder
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
             .setRunLengthEncoded(runLengthColumn != null)
-            .setHasMultipleValues(hasMultipleValues)
-        ,
+            .setHasMultipleValues(hasMultipleValues),
         dictionaryEncodedColumn,
         runLengthColumn,
         genericColumn,
         complexColumn,
         bitmapIndex,
-        spatialIndex
+        spatialIndex,
+        nullValueBitmap
     );
   }
 }

@@ -22,10 +22,13 @@ package io.druid.query.aggregation.first;
 import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.column.Column;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -70,7 +73,7 @@ public class LongFirstAggregationTest
   @Test
   public void testLongFirstAggregator()
   {
-    LongFirstAggregator agg = (LongFirstAggregator) longFirstAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = longFirstAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -85,13 +88,17 @@ public class LongFirstAggregationTest
     Assert.assertEquals(longValues[3], agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
+    } else {
+      Assert.assertNull(agg.get());
+    }
   }
 
   @Test
   public void testLongFirstBufferAggregator()
   {
-    LongFirstBufferAggregator agg = (LongFirstBufferAggregator) longFirstAggFactory.factorizeBuffered(
+    BufferAggregator agg = longFirstAggFactory.factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[longFirstAggFactory.getMaxIntermediateSize()]);
@@ -121,7 +128,7 @@ public class LongFirstAggregationTest
   @Test
   public void testLongFirstCombiningAggregator()
   {
-    LongFirstAggregator agg = (LongFirstAggregator) combiningAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -137,13 +144,17 @@ public class LongFirstAggregationTest
     Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs, 0.0001);
+    } else {
+      Assert.assertNull(agg.get());
+    }
   }
 
   @Test
   public void testLongFirstCombiningBufferAggregator()
   {
-    LongFirstBufferAggregator agg = (LongFirstBufferAggregator) combiningAggFactory.factorizeBuffered(
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[longFirstAggFactory.getMaxIntermediateSize()]);
@@ -173,7 +184,7 @@ public class LongFirstAggregationTest
   }
 
   private void aggregate(
-      LongFirstAggregator agg
+      Aggregator agg
   )
   {
     agg.aggregate();
@@ -183,7 +194,7 @@ public class LongFirstAggregationTest
   }
 
   private void aggregate(
-      LongFirstBufferAggregator agg,
+      BufferAggregator agg,
       ByteBuffer buff,
       int position
   )

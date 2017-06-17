@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -97,18 +98,20 @@ public class MapBasedRow implements Row
   }
 
   @Override
+  @Nullable
   public Object getRaw(String dimension)
   {
     return event.get(dimension);
   }
 
   @Override
-  public float getFloatMetric(String metric)
+  @Nullable
+  public Float getFloatMetric(String metric)
   {
     Object metricValue = event.get(metric);
 
     if (metricValue == null) {
-      return 0.0f;
+      return null;
     }
 
     if (metricValue instanceof Number) {
@@ -126,12 +129,13 @@ public class MapBasedRow implements Row
   }
 
   @Override
-  public long getLongMetric(String metric)
+  @Nullable
+  public Long getLongMetric(String metric)
   {
     Object metricValue = event.get(metric);
 
     if (metricValue == null) {
-      return 0L;
+      return null;
     }
 
     if (metricValue instanceof Number) {
@@ -150,12 +154,13 @@ public class MapBasedRow implements Row
   }
 
   @Override
-  public double getDoubleMetric(String metric)
+  @Nullable
+  public Double getDoubleMetric(String metric)
   {
     Object metricValue = event.get(metric);
 
     if (metricValue == null) {
-      return 0.0d;
+      return null;
     }
 
     if (metricValue instanceof Number) {

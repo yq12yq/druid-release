@@ -25,6 +25,7 @@ import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.ExprType;
 import io.druid.query.filter.LikeDimFilter;
+import io.druid.segment.NullHandlingHelper;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -62,7 +63,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
     }
 
     final LikeDimFilter.LikeMatcher likeMatcher = LikeDimFilter.LikeMatcher.from(
-        (String) patternExpr.getLiteralValue(),
+        NullHandlingHelper.nullToDefault((String) patternExpr.getLiteralValue()),
         escapeChar
     );
 

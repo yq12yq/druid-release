@@ -73,6 +73,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -418,25 +419,29 @@ public class IndexGeneratorJob implements Jobby
         }
 
         @Override
+        @Nullable
         public Object getRaw(String dimension)
         {
           return row.getRaw(dimension);
         }
 
         @Override
-        public float getFloatMetric(String metric)
+        @Nullable
+        public Float getFloatMetric(String metric)
         {
           return row.getFloatMetric(metric);
         }
 
         @Override
-        public long getLongMetric(String metric)
+        @Nullable
+        public Long getLongMetric(String metric)
         {
           return row.getLongMetric(metric);
         }
 
         @Override
-        public double getDoubleMetric(String metric)
+        @Nullable
+        public Double getDoubleMetric(String metric)
         {
           return row.getDoubleMetric(metric);
         }

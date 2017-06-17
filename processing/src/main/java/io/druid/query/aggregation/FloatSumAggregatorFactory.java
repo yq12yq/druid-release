@@ -25,7 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -54,19 +57,37 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumAggregator(getFloatColumnSelector(metricFactory, 0.0f));
+    FloatColumnSelector floatColumnSelector = getFloatColumnSelector(metricFactory, 0.0f);
+    return NullHandlingHelper.getNullableAggregator(new FloatSumAggregator(floatColumnSelector), floatColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumBufferAggregator(getFloatColumnSelector(metricFactory, 0.0f));
+    FloatColumnSelector floatColumnSelector = getFloatColumnSelector(metricFactory, 0.0f);
+    return NullHandlingHelper.getNullableAggregator(
+        new FloatSumBufferAggregator(floatColumnSelector),
+        floatColumnSelector
+    );
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return FloatSumAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return NullHandlingHelper.getNullableCombiner(new DoubleSumAggregateCombiner());
   }
 
   @Override

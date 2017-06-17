@@ -20,13 +20,16 @@
 package io.druid.segment;
 
 import com.google.common.base.Throwables;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.io.Closer;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IOPeon;
-import io.druid.segment.serde.FloatGenericColumnPartSerde;
+import io.druid.segment.serde.FloatGenericColumnPartSerdeV2;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,6 +46,9 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   protected IOPeon ioPeon;
 
   private FloatColumnSerializer serializer;
+  private MutableBitmap nullRowsBitmap;
+  private int rowCount = 0;
+  private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter;
 
   public FloatDimensionMergerV9(
       String dimensionName,
@@ -59,6 +65,7 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
     this.outDir = outDir;
     this.ioPeon = ioPeon;
     this.progress = progress;
+    this.nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
 
     try {
       setupEncodedValueWriter();
@@ -89,19 +96,27 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   @Override
   public void processMergedRow(Float rowValues) throws IOException
   {
+    if (rowValues == null) {
+      nullRowsBitmap.add(rowCount);
+    }
     serializer.serialize(rowValues);
+    rowCount++;
   }
 
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
   {
-    // floats have no indices to write
+    this.nullValueBitmapWriter = IndexMergerV9.createNullRowsBitmapWriter(
+        ioPeon,
+        dimensionName,
+        nullRowsBitmap,
+        indexSpec
+    );
   }
 
   @Override
   public boolean canSkip()
   {
-    // a float column can never be all null
     return false;
   }
 
@@ -111,11 +126,14 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
     serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.FLOAT);
+    builder.setHasNullValues(!nullRowsBitmap.isEmpty());
     builder.addSerde(
-        FloatGenericColumnPartSerde.serializerBuilder()
-                                  .withByteOrder(IndexIO.BYTE_ORDER)
-                                  .withDelegate(serializer)
-                                  .build()
+        FloatGenericColumnPartSerdeV2.serializerBuilder()
+                                     .withByteOrder(IndexIO.BYTE_ORDER)
+                                     .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                     .withNullValueBitmapWriter(nullValueBitmapWriter)
+                                     .withDelegate(serializer)
+                                     .build()
     );
     return builder.build();
   }

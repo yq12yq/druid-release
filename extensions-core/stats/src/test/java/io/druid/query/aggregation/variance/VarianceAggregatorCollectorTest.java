@@ -146,10 +146,17 @@ public class VarianceAggregatorCollectorTest
     float v;
 
     @Override
-    public float get()
+    public float getFloat()
     {
       return v;
     }
+
+    @Override
+    public boolean isNull()
+    {
+      return false;
+    }
+
   }
 
   private static class ObjectHandOver implements ObjectColumnSelector

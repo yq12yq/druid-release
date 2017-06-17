@@ -255,7 +255,6 @@ public class IndexTask extends AbstractTask
         }
         shardSpecs.put(interval, intervalShardSpecs);
       }
-
       return shardSpecs;
     }
 

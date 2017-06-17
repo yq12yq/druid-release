@@ -34,9 +34,15 @@ public class TestDoubleColumnSelectorImpl extends TestDoubleColumnSelector
   }
 
   @Override
-  public double get()
+  public double getDouble()
   {
     return doubles[index];
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return false;
   }
 
   public void increment()

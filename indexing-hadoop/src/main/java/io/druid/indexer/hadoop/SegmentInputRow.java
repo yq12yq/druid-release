@@ -23,6 +23,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -64,25 +65,29 @@ public class SegmentInputRow implements InputRow
   }
 
   @Override
+  @Nullable
   public Object getRaw(String dimension)
   {
     return delegate.getRaw(dimension);
   }
 
   @Override
-  public float getFloatMetric(String metric)
+  @Nullable
+  public Float getFloatMetric(String metric)
   {
     return delegate.getFloatMetric(metric);
   }
 
   @Override
-  public long getLongMetric(String metric)
+  @Nullable
+  public Long getLongMetric(String metric)
   {
     return delegate.getLongMetric(metric);
   }
 
   @Override
-  public double getDoubleMetric(String metric)
+  @Nullable
+  public Double getDoubleMetric(String metric)
   {
     return delegate.getDoubleMetric(metric);
   }

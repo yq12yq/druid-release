@@ -36,9 +36,15 @@ public final class ZeroDoubleColumnSelector implements DoubleColumnSelector
   }
 
   @Override
-  public double get()
+  public double getDouble()
   {
     return 0.0d;
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return false;
   }
 
   @Override

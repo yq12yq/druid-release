@@ -84,7 +84,7 @@ public class StringUtilsTest
     StringUtils.fromUtf8((ByteBuffer) null);
   }
 
-  @Test(expected = java.lang.NullPointerException.class)
+  @Test(expected = NullPointerException.class)
   public void testNullPointerByteArray()
   {
     StringUtils.fromUtf8((byte[]) null);

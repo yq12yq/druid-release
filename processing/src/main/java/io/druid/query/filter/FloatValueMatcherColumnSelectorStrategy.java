@@ -22,7 +22,6 @@ package io.druid.query.filter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.filter.BooleanValueMatcher;
 
 public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<FloatColumnSelector>
 {
@@ -31,7 +30,20 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
   {
     final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
     if (matchVal == null) {
-      return BooleanValueMatcher.of(false);
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return selector.isNull();
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("selector", selector);
+        }
+      };
     }
 
     final int matchValIntBits = Float.floatToIntBits(matchVal);
@@ -40,7 +52,7 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public boolean matches()
       {
-        return Float.floatToIntBits(selector.get()) == matchValIntBits;
+        return Float.floatToIntBits(selector.getFloat()) == matchValIntBits;
       }
 
       @Override
@@ -62,7 +74,10 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
       @Override
       public boolean matches()
       {
-        return predicate.applyFloat(selector.get());
+        if (selector.isNull()) {
+          return predicate.applyNull();
+        }
+        return predicate.applyFloat(selector.getFloat());
       }
 
       @Override
@@ -77,13 +92,11 @@ public class FloatValueMatcherColumnSelectorStrategy implements ValueMatcherColu
   @Override
   public ValueGetter makeValueGetter(final FloatColumnSelector selector)
   {
-    return new ValueGetter()
-    {
-      @Override
-      public String[] get()
-      {
-        return new String[]{ Float.toString(selector.get()) };
+    return () -> {
+      if (selector.isNull()) {
+        return null;
       }
+      return new String[]{Float.toString(selector.getFloat())};
     };
   }
 }

@@ -134,13 +134,14 @@ public final class DimensionHandlerUtils
    * @param <ColumnSelectorStrategyClass> The strategy type created by the provided strategy factory.
    * @param strategyFactory A factory provided by query engines that generates type-handling strategies
    * @param dimensionSpecs The set of columns to generate ColumnSelectorPlus objects for
-   * @param cursor Used to create value selectors for columns.
+   * @param columnSelectorFactory Used to create value selectors for columns.
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
    */
-  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy> ColumnSelectorPlus<ColumnSelectorStrategyClass>[] createColumnSelectorPluses(
+  public static <ColumnSelectorStrategyClass extends ColumnSelectorStrategy>
+  ColumnSelectorPlus<ColumnSelectorStrategyClass>[] createColumnSelectorPluses(
       ColumnSelectorStrategyFactory<ColumnSelectorStrategyClass> strategyFactory,
       List<DimensionSpec> dimensionSpecs,
-      ColumnSelectorFactory cursor
+      ColumnSelectorFactory columnSelectorFactory
   )
   {
     int dimCount = dimensionSpecs.size();
@@ -150,12 +151,12 @@ public final class DimensionHandlerUtils
       final String dimName = dimSpec.getDimension();
       final ColumnValueSelector selector = getColumnValueSelectorFromDimensionSpec(
           dimSpec,
-          cursor
+          columnSelectorFactory
       );
       ColumnSelectorStrategyClass strategy = makeStrategy(
           strategyFactory,
           dimSpec,
-          cursor.getColumnCapabilities(dimSpec.getDimension()),
+          columnSelectorFactory.getColumnCapabilities(dimSpec.getDimension()),
           selector
       );
       final ColumnSelectorPlus<ColumnSelectorStrategyClass> selectorPlus = new ColumnSelectorPlus<>(
@@ -236,10 +237,20 @@ public final class DimensionHandlerUtils
     return strategyFactory.makeColumnSelectorStrategy(capabilities, selector);
   }
 
-  public static Long convertObjectToLong(@Nullable Object valObj)
+  public static @Nullable
+  String convertObjectToString(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_LONG;
+      return null;
+    }
+    return valObj.toString();
+  }
+
+  public static @Nullable
+  Long convertObjectToLong(@Nullable Object valObj)
+  {
+    if (valObj == null) {
+      return null;
     }
 
     if (valObj instanceof Long) {
@@ -253,10 +264,11 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Float convertObjectToFloat(@Nullable Object valObj)
+  public static @Nullable
+  Float convertObjectToFloat(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_FLOAT;
+      return null;
     }
 
     if (valObj instanceof Float) {
@@ -270,10 +282,11 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Double convertObjectToDouble(@Nullable Object valObj)
+  public static @Nullable
+  Double convertObjectToDouble(@Nullable Object valObj)
   {
     if (valObj == null) {
-      return ZERO_DOUBLE;
+      return null;
     }
 
     if (valObj instanceof Double) {
@@ -281,8 +294,8 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).doubleValue();
     } else if (valObj instanceof String) {
-      Double doubleValue = Doubles.tryParse((String) valObj);
-      return  doubleValue == null ? ZERO_DOUBLE : doubleValue;
+      Double doubleVal = Doubles.tryParse((String) valObj);
+      return NullHandlingHelper.nullToDefault(doubleVal);
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
@@ -324,15 +337,18 @@ public final class DimensionHandlerUtils
     }
   }
 
-  public static Double nullToZero(@Nullable Double number) {
-    return number == null ? ZERO_DOUBLE : number;
+  public static Double nullToZero(@Nullable Double number)
+  {
+    return number == null ? NullHandlingHelper.ZERO_DOUBLE : number;
   }
 
-  public static Long nullToZero(@Nullable Long number) {
-    return number == null ? ZERO_LONG : number;
+  public static Long nullToZero(@Nullable Long number)
+  {
+    return number == null ? NullHandlingHelper.ZERO_LONG : number;
   }
 
-  public static Float nullToZero(@Nullable Float number) {
-    return number == null ? ZERO_FLOAT : number;
+  public static Float nullToZero(@Nullable Float number)
+  {
+    return number == null ? NullHandlingHelper.ZERO_FLOAT : number;
   }
 }

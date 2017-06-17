@@ -41,6 +41,7 @@ import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 
+import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.List;
@@ -106,18 +107,22 @@ public class InputRowSerde
           }
 
           String t = aggFactory.getTypeName();
-
-          if (t.equals("float")) {
-            out.writeFloat(agg.getFloat());
-          } else if (t.equals("long")) {
-            WritableUtils.writeVLong(out, agg.getLong());
-          } else if (t.equals("double")) {
-            out.writeDouble(agg.getDouble());
+          if (agg.isNull()) {
+            out.writeByte((byte) 1);
           } else {
-            //its a complex metric
-            Object val = agg.get();
-            ComplexMetricSerde serde = getComplexMetricSerde(t);
-            writeBytes(serde.toBytes(val), out);
+            out.writeByte((byte) 0);
+            if (t.equals("float")) {
+              out.writeFloat(agg.getFloat());
+            } else if (t.equals("long")) {
+              WritableUtils.writeVLong(out, agg.getLong());
+            } else if (t.equals("double")) {
+              out.writeDouble(agg.getDouble());
+            } else {
+              //its a complex metric
+              Object val = agg.get();
+              ComplexMetricSerde serde = getComplexMetricSerde(t);
+              writeBytes(serde.toBytes(val), out);
+            }
           }
         }
       }
@@ -128,15 +133,18 @@ public class InputRowSerde
     }
   }
 
-  private static void writeBytes(byte[] value, ByteArrayDataOutput out) throws IOException
+  private static void writeBytes(@Nullable byte[] value, ByteArrayDataOutput out) throws IOException
   {
-    WritableUtils.writeVInt(out, value.length);
-    out.write(value, 0, value.length);
+    int length = value == null ? -1 : value.length;
+    WritableUtils.writeVInt(out, length);
+    if (value != null) {
+      out.write(value, 0, value.length);
+    }
   }
 
-  private static void writeString(String value, ByteArrayDataOutput out) throws IOException
+  private static void writeString(@Nullable String value, ByteArrayDataOutput out) throws IOException
   {
-    writeBytes(StringUtils.toUtf8(value), out);
+    writeBytes(StringUtils.toUtf8Nullable(value), out);
   }
 
   private static void writeStringArray(List<String> values, ByteArrayDataOutput out) throws IOException
@@ -151,15 +159,20 @@ public class InputRowSerde
     }
   }
 
+  @Nullable
   private static String readString(DataInput in) throws IOException
   {
     byte[] result = readBytes(in);
     return StringUtils.fromUtf8(result);
   }
 
+  @Nullable
   private static byte[] readBytes(DataInput in) throws IOException
   {
     int size = WritableUtils.readVInt(in);
+    if (size < 0) {
+      return null;
+    }
     byte[] result = new byte[size];
     in.readFully(result, 0, size);
     return result;
@@ -210,6 +223,11 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         String metric = readString(in);
         String type = getType(metric, aggs, i);
+        byte metricNullability = in.readByte();
+        if (metricNullability == (byte) 1) {
+          // metric value is null.
+          continue;
+        }
         if (type.equals("float")) {
           event.put(metric, in.readFloat());
         } else if (type.equals("long")) {

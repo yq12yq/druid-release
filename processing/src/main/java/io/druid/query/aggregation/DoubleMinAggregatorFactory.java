@@ -25,10 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -55,25 +57,40 @@ public class DoubleMinAggregatorFactory extends SimpleDoubleAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMinAggregator(getDoubleColumnSelector(metricFactory, Double.POSITIVE_INFINITY));
+    DoubleColumnSelector doubleColumnSelector = getDoubleColumnSelector(metricFactory, Double.POSITIVE_INFINITY);
+    return NullHandlingHelper.getNullableAggregator(
+        new DoubleMinAggregator(doubleColumnSelector),
+        doubleColumnSelector
+    );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMinBufferAggregator(getDoubleColumnSelector(metricFactory, Double.POSITIVE_INFINITY));
+    DoubleColumnSelector doubleColumnSelector = getDoubleColumnSelector(metricFactory, Double.POSITIVE_INFINITY);
+    return NullHandlingHelper.getNullableAggregator(
+        new DoubleMinBufferAggregator(doubleColumnSelector),
+        doubleColumnSelector
+    );
   }
 
   @Override
-  public Comparator getComparator()
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
-    return DoubleMinAggregator.COMPARATOR;
-  }
-
-  @Override
-  public Object combine(Object lhs, Object rhs)
-  {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return DoubleMinAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return NullHandlingHelper.getNullableCombiner(new DoubleMinAggregateCombiner());
   }
 
   @Override

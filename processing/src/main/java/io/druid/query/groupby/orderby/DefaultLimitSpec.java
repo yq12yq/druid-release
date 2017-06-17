@@ -109,6 +109,11 @@ public class DefaultLimitSpec implements LimitSpec
     return limit;
   }
 
+  public boolean isLimited()
+  {
+    return limit < Integer.MAX_VALUE;
+  }
+
   @Override
   public Function<Sequence<Row>, Sequence<Row>> build(
       List<DimensionSpec> dimensions,
@@ -145,7 +150,7 @@ public class DefaultLimitSpec implements LimitSpec
         final StringComparator naturalComparator;
         if (columnType == ValueType.STRING) {
           naturalComparator = StringComparators.LEXICOGRAPHIC;
-        } else if (columnType == ValueType.LONG || columnType == ValueType.FLOAT || columnType == ValueType.DOUBLE) {
+        } else if (ValueType.isNumeric(columnType)) {
           naturalComparator = StringComparators.NUMERIC;
         } else {
           sortingNeeded = true;
@@ -162,16 +167,16 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     if (!sortingNeeded) {
-      return limit == Integer.MAX_VALUE ? Functions.<Sequence<Row>>identity() : new LimitingFn(limit);
+      return isLimited() ? new LimitingFn(limit) : Functions.identity();
     }
 
     // Materialize the Comparator first for fast-fail error checking.
     final Ordering<Row> ordering = makeComparator(dimensions, aggs, postAggs);
 
-    if (limit == Integer.MAX_VALUE) {
-      return new SortingFn(ordering);
-    } else {
+    if (isLimited()) {
       return new TopNFunction(ordering, limit);
+    } else {
+      return new SortingFn(ordering);
     }
   }
 

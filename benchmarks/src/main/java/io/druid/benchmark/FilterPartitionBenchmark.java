@@ -514,7 +514,9 @@ public class FilterPartitionBenchmark
           {
             List<String> strings = new ArrayList<String>();
             List<DimensionSelector> selectors = new ArrayList<>();
-            selectors.add(input.makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null)));
+            selectors.add(
+                input.getColumnSelectorFactory().makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null))
+            );
             //selectors.add(input.makeDimensionSelector(new DefaultDimensionSpec("dimB", null)));
             while (!input.isDone()) {
               for (DimensionSelector selector : selectors) {
@@ -540,9 +542,9 @@ public class FilterPartitionBenchmark
           public List<Long> apply(Cursor input)
           {
             List<Long> longvals = new ArrayList<Long>();
-            LongColumnSelector selector = input.makeLongColumnSelector("sumLongSequential");
+            LongColumnSelector selector = input.getColumnSelectorFactory().makeLongColumnSelector("sumLongSequential");
             while (!input.isDone()) {
-              long rowval = selector.get();
+              long rowval = selector.getLong();
               blackhole.consume(rowval);
               input.advance();
             }

@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -29,7 +30,7 @@ public interface GenericColumnSerializer extends Closeable
 {
   public void open() throws IOException;
 
-  public void serialize(Object obj) throws IOException;
+  public void serialize(@Nullable Object obj) throws IOException;
 
   public long getSerializedSize();
 

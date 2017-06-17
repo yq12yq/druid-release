@@ -35,9 +35,12 @@ import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import io.druid.collections.CombiningIterable;
 import io.druid.common.utils.JodaUtils;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
@@ -51,6 +54,7 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.GenericIndexed;
@@ -63,9 +67,9 @@ import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
-import io.druid.segment.serde.DoubleGenericColumnPartSerde;
-import io.druid.segment.serde.FloatGenericColumnPartSerde;
-import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.serde.DoubleGenericColumnPartSerdeV2;
+import io.druid.segment.serde.FloatGenericColumnPartSerdeV2;
+import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
@@ -224,17 +228,31 @@ public class IndexMergerV9 implements IndexMerger
       final ArrayList<GenericColumnSerializer> metWriters = setupMetricsWriters(
           ioPeon, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec
       );
+
+      List<MutableBitmap> metricNullRowsBitmap = setupMetricNullRowsBitmaps(metWriters.size(), indexSpec);
+
       final List<IntBuffer> rowNumConversions = Lists.newArrayListWithCapacity(adapters.size());
 
       mergeIndexesAndWriteColumns(
-          adapters, progress, theRows, timeWriter, metWriters, rowNumConversions, mergers
+          adapters, progress, theRows, timeWriter, metWriters, rowNumConversions, mergers,
+          metricNullRowsBitmap
       );
 
       /************ Create Inverted Indexes and Finalize Build Columns *************/
       final String section = "build inverted index and columns";
       progress.startSection(section);
       makeTimeColumn(v9Smoosher, progress, timeWriter);
-      makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
+      makeMetricsColumns(
+          v9Smoosher,
+          progress,
+          mergedMetrics,
+          metricsValueTypes,
+          metricTypeNames,
+          metWriters,
+          indexSpec,
+          metricNullRowsBitmap,
+          ioPeon
+      );
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
@@ -266,6 +284,41 @@ public class IndexMergerV9 implements IndexMerger
     finally {
       closer.close();
     }
+  }
+
+  private List<MutableBitmap> setupMetricNullRowsBitmaps(int size, IndexSpec indexSpec)
+  {
+    List<MutableBitmap> rv = Lists.newArrayListWithCapacity(size);
+    for (int i = 0; i < size; i++) {
+      rv.add(indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap());
+    }
+    return rv;
+  }
+
+  public static ByteBufferWriter<ImmutableBitmap> createNullRowsBitmapWriter(
+      IOPeon ioPeon,
+      String columnName,
+      MutableBitmap nullRowsBitmap,
+      IndexSpec indexSpec
+  )
+      throws IOException
+  {
+    if (nullRowsBitmap.isEmpty()) {
+      return null;
+    }
+    ;
+    ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter = new ByteBufferWriter<>(
+        ioPeon,
+        StringUtils.format("%s.nullBitmap", columnName),
+        indexSpec.getBitmapSerdeFactory().getObjectStrategy()
+    );
+    try (Closeable bitmapWriter = nullValueBitmapWriter) {
+      nullValueBitmapWriter.open();
+      nullValueBitmapWriter.write(indexSpec.getBitmapSerdeFactory()
+                                           .getBitmapFactory()
+                                           .makeImmutableBitmap(nullRowsBitmap));
+    }
+    return nullValueBitmapWriter;
   }
 
   private void makeMetadataBinary(
@@ -349,7 +402,10 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final Map<String, ValueType> metricsValueTypes,
       final Map<String, String> metricTypeNames,
-      final List<GenericColumnSerializer> metWriters
+      final List<GenericColumnSerializer> metWriters,
+      final IndexSpec indexSpec,
+      final List<MutableBitmap> metricNullRowsBitmap,
+      IOPeon ioPeon
   ) throws IOException
   {
     final String section = "make metric columns";
@@ -368,30 +424,48 @@ public class IndexMergerV9 implements IndexMerger
         case LONG:
           builder.setValueType(ValueType.LONG);
           builder.addSerde(
-              LongGenericColumnPartSerde
+              LongGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((LongColumnSerializer) writer)
+                  .withNullValueBitmapWriter(createNullRowsBitmapWriter(
+                      ioPeon,
+                      metric,
+                      metricNullRowsBitmap.get(i),
+                      indexSpec
+                  ))
                   .build()
           );
           break;
         case FLOAT:
           builder.setValueType(ValueType.FLOAT);
           builder.addSerde(
-              FloatGenericColumnPartSerde
+              FloatGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((FloatColumnSerializer) writer)
+                  .withNullValueBitmapWriter(createNullRowsBitmapWriter(
+                      ioPeon,
+                      metric,
+                      metricNullRowsBitmap.get(i),
+                      indexSpec
+                  ))
                   .build()
           );
           break;
         case DOUBLE:
           builder.setValueType(ValueType.DOUBLE);
           builder.addSerde(
-              DoubleGenericColumnPartSerde
+              DoubleGenericColumnPartSerdeV2
                   .serializerBuilder()
                   .withByteOrder(IndexIO.BYTE_ORDER)
                   .withDelegate((DoubleColumnSerializer) writer)
+                  .withNullValueBitmapWriter(createNullRowsBitmapWriter(
+                      ioPeon,
+                      metric,
+                      metricNullRowsBitmap.get(i),
+                      indexSpec
+                  ))
                   .build()
           );
           break;
@@ -432,10 +506,10 @@ public class IndexMergerV9 implements IndexMerger
         .builder()
         .setValueType(ValueType.LONG)
         .addSerde(
-            LongGenericColumnPartSerde.serializerBuilder()
-                                      .withByteOrder(IndexIO.BYTE_ORDER)
-                                      .withDelegate(timeWriter)
-                                      .build()
+            LongGenericColumnPartSerdeV2.serializerBuilder()
+                                        .withByteOrder(IndexIO.BYTE_ORDER)
+                                        .withDelegate(timeWriter)
+                                        .build()
         )
         .build();
     makeColumn(v9Smoosher, Column.TIME_COLUMN_NAME, serdeficator);
@@ -466,7 +540,8 @@ public class IndexMergerV9 implements IndexMerger
       final LongColumnSerializer timeWriter,
       final ArrayList<GenericColumnSerializer> metWriters,
       final List<IntBuffer> rowNumConversions,
-      final List<DimensionMerger> mergers
+      final List<DimensionMerger> mergers,
+      final List<MutableBitmap> metricNullRowsBitmap
   ) throws IOException
   {
     final String section = "walk through and merge rows";
@@ -487,7 +562,11 @@ public class IndexMergerV9 implements IndexMerger
 
       final Object[] metrics = theRow.getMetrics();
       for (int i = 0; i < metrics.length; ++i) {
-        metWriters.get(i).serialize(metrics[i]);
+        Object metricVal = metrics[i];
+        if (metricVal == null) {
+          metricNullRowsBitmap.get(i).add(rowCount);
+        }
+        metWriters.get(i).serialize(metricVal);
       }
 
       Object[] dims = theRow.getDims();

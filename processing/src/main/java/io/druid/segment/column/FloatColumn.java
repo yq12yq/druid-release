@@ -19,6 +19,7 @@
 
 package io.druid.segment.column;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 
 /**
@@ -31,10 +32,13 @@ public class FloatColumn extends AbstractColumn
       .setType(ValueType.FLOAT);
 
   private final CompressedFloatsIndexedSupplier column;
+  private final ImmutableBitmap nullValueBitmap;
 
-  public FloatColumn(CompressedFloatsIndexedSupplier column)
+  public FloatColumn(CompressedFloatsIndexedSupplier column, ImmutableBitmap nullValueBitmap)
   {
     this.column = column;
+    this.nullValueBitmap = nullValueBitmap;
+
   }
 
   @Override
@@ -52,6 +56,6 @@ public class FloatColumn extends AbstractColumn
   @Override
   public GenericColumn getGenericColumn()
   {
-    return new IndexedFloatsGenericColumn(column.get());
+    return new IndexedFloatsGenericColumn(column.get(), nullValueBitmap);
   }
 }

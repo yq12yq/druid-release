@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Doubles;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
@@ -56,6 +57,7 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
@@ -141,16 +143,15 @@ public class TimeseriesQueryRunnerTest
                                   )
                                   .descending(descending)
                                   .build();
-
+    Map<String, Object> resultMap = Maps.newHashMap();
+    resultMap.put("rows", 0L);
+    resultMap.put("index", NullHandlingHelper.useDefaultValuesForNull() ? 0D : null);
+    resultMap.put("first", NullHandlingHelper.useDefaultValuesForNull() ? 0D : null);
     List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
             new DateTime("2020-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 0L,
-                    "index", 0D,
-                    "first", 0D
-                )
+                resultMap
             )
         )
     );
@@ -210,24 +211,61 @@ public class TimeseriesQueryRunnerTest
           QueryRunnerTestHelper.skippedDay.equals(current) ? 0L : 13L,
           value.getLongMetric("rows").longValue()
       );
-      Assert.assertEquals(
-          result.toString(),
-          Doubles.tryParse(expectedIndex[count]).doubleValue(),
-          value.getDoubleMetric("index").doubleValue(),
-          value.getDoubleMetric("index").doubleValue() *  1e-6
-      );
-      Assert.assertEquals(
-          result.toString(),
-          new Double(expectedIndex[count]) +
-          (QueryRunnerTestHelper.skippedDay.equals(current) ? 0L : 13L) + 1L,
-          value.getDoubleMetric("addRowsIndexConstant"),
-          value.getDoubleMetric("addRowsIndexConstant") * 1e-6
-      );
-      Assert.assertEquals(
-          value.getDoubleMetric("uniques"),
-          QueryRunnerTestHelper.skippedDay.equals(current) ? 0.0d : 9.0d,
-          0.02
-      );
+
+      if (!QueryRunnerTestHelper.skippedDay.equals(current)) {
+        Assert.assertEquals(
+            result.toString(),
+            Doubles.tryParse(expectedIndex[count]).doubleValue(),
+            value.getDoubleMetric("index").doubleValue(),
+            value.getDoubleMetric("index").doubleValue() * 1e-6
+        );
+        Assert.assertEquals(
+            result.toString(),
+            new Double(expectedIndex[count]) +
+            13L + 1L,
+            value.getDoubleMetric("addRowsIndexConstant"),
+            value.getDoubleMetric("addRowsIndexConstant") * 1e-6
+        );
+        Assert.assertEquals(
+            value.getDoubleMetric("uniques"),
+            9.0d,
+            0.02
+        );
+      } else {
+        if (NullHandlingHelper.useDefaultValuesForNull()) {
+          Assert.assertEquals(
+              result.toString(),
+              0.0D,
+              value.getDoubleMetric("index").doubleValue(),
+              value.getDoubleMetric("index").doubleValue() * 1e-6
+          );
+          Assert.assertEquals(
+              result.toString(),
+              new Double(expectedIndex[count]) + 1L,
+              value.getDoubleMetric("addRowsIndexConstant"),
+              value.getDoubleMetric("addRowsIndexConstant") * 1e-6
+          );
+          Assert.assertEquals(
+              0.0D,
+              value.getDoubleMetric("uniques"),
+              0.02
+          );
+        } else {
+          Assert.assertNull(
+              result.toString(),
+              value.getDoubleMetric("index")
+          );
+          Assert.assertNull(
+              result.toString(),
+              value.getDoubleMetric("addRowsIndexConstant")
+          );
+          Assert.assertEquals(
+              value.getDoubleMetric("uniques"),
+              0.0d,
+              0.02
+          );
+        }
+      }
 
       lastResult = result;
       ++count;
@@ -666,13 +704,18 @@ public class TimeseriesQueryRunnerTest
                                    .build();
 
     List<Result<TimeseriesResultValue>> lotsOfZeroes = Lists.newArrayList();
-    final Iterable<Interval> iterable = Granularities.HOUR.getIterable(new Interval(new DateTime("2011-04-14T01").getMillis(), new DateTime("2011-04-15").getMillis()));
+    final Iterable<Interval> iterable = Granularities.HOUR.getIterable(
+        new Interval(new DateTime("2011-04-14T01"), new DateTime("2011-04-15"))
+    );
+    Map noRowsResult = Maps.newHashMap();
+    noRowsResult.put("rows", 0L);
+    noRowsResult.put("idx", NullHandlingHelper.useDefaultValuesForNull() ? 0L : null);
     for (Interval interval : iterable) {
         lotsOfZeroes.add(
                 new Result<>(
                         interval.getStart(),
                         new TimeseriesResultValue(
-                                ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
+                            noRowsResult
                         )
                 )
         );
@@ -1499,27 +1542,23 @@ public class TimeseriesQueryRunnerTest
                                   .descending(descending)
                                   .build();
 
+    Map<String, Object> resultMap = Maps.newHashMap();
+    resultMap.put("rows", 0L);
+    resultMap.put("index", NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : null);
+    resultMap.put("addRowsIndexConstant", NullHandlingHelper.useDefaultValuesForNull() ? 1.0 : null);
+    resultMap.put("uniques", 0.0);
+
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             new DateTime("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 0L,
-                    "index", 0.0,
-                    "addRowsIndexConstant", 1.0,
-                    "uniques", 0.0
-                )
+                resultMap
             )
         ),
         new Result<>(
             new DateTime("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 0L,
-                    "index", 0.0,
-                    "addRowsIndexConstant", 1.0,
-                    "uniques", 0.0
-                )
+                resultMap
             )
         )
     );
@@ -1656,28 +1695,23 @@ public class TimeseriesQueryRunnerTest
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
+    Map<String, Object> resultMap = Maps.newHashMap();
+    resultMap.put("rows", 0L);
+    resultMap.put("index", NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : null);
+    resultMap.put("addRowsIndexConstant", NullHandlingHelper.useDefaultValuesForNull() ? 1.0 : null);
+    resultMap.put("uniques", 0.0);
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             new DateTime("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 0L,
-                    "index", 0.0,
-                    "addRowsIndexConstant", 1.0,
-                    "uniques", 0.0
-                )
+                resultMap
             )
         ),
         new Result<>(
             new DateTime("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 0L,
-                    "index", 0.0,
-                    "addRowsIndexConstant", 1.0,
-                    "uniques", 0.0
-                )
+                resultMap
             )
         )
     );
@@ -1715,28 +1749,23 @@ public class TimeseriesQueryRunnerTest
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                   .descending(descending)
                                   .build();
+    Map<String, Object> resultMap = Maps.newHashMap();
+    resultMap.put("rows", 0L);
+    resultMap.put("index", NullHandlingHelper.useDefaultValuesForNull() ? 0.0 : null);
+    resultMap.put("addRowsIndexConstant", NullHandlingHelper.useDefaultValuesForNull() ? 1.0 : null);
+    resultMap.put("uniques", 0.0);
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             new DateTime("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 0L,
-                    "index", 0.0,
-                    "addRowsIndexConstant", 1.0,
-                    "uniques", 0.0
-                )
+                resultMap
             )
         ),
         new Result<>(
             new DateTime("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of(
-                    "rows", 0L,
-                    "index", 0.0,
-                    "addRowsIndexConstant", 1.0,
-                    "uniques", 0.0
-                )
+                resultMap
             )
         )
     );

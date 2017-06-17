@@ -22,7 +22,6 @@ package io.druid.query.filter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.filter.BooleanValueMatcher;
 
 public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<LongColumnSelector>
 {
@@ -31,7 +30,20 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
   {
     final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
     if (matchVal == null) {
-      return BooleanValueMatcher.of(false);
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return selector.isNull();
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("selector", selector);
+        }
+      };
     }
     final long matchValLong = matchVal;
     return new ValueMatcher()
@@ -39,7 +51,7 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public boolean matches()
       {
-        return selector.get() == matchValLong;
+        return selector.getLong() == matchValLong;
       }
 
       @Override
@@ -61,7 +73,10 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
       @Override
       public boolean matches()
       {
-        return predicate.applyLong(selector.get());
+        if (selector.isNull()) {
+          return predicate.applyNull();
+        }
+        return predicate.applyLong(selector.getLong());
       }
 
       @Override
@@ -76,13 +91,11 @@ public class LongValueMatcherColumnSelectorStrategy implements ValueMatcherColum
   @Override
   public ValueGetter makeValueGetter(final LongColumnSelector selector)
   {
-    return new ValueGetter()
-    {
-      @Override
-      public String[] get()
-      {
-        return new String[]{ Long.toString(selector.get()) };
+    return () -> {
+      if (selector.isNull()) {
+        return null;
       }
+      return new String[]{Long.toString(selector.getLong())};
     };
   }
 }

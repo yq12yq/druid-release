@@ -33,6 +33,7 @@ import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ValueType;
 import org.junit.Assert;
@@ -95,7 +96,7 @@ public class ExpressionVirtualColumnTest
     final ObjectColumnSelector selector = XPLUSY.makeObjectColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(null, selector.get());
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "" : null, selector.get());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
     Assert.assertEquals(4.0d, selector.get());
@@ -113,16 +114,16 @@ public class ExpressionVirtualColumnTest
     final LongColumnSelector selector = XPLUSY.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(4L, selector.get());
+    Assert.assertEquals(4L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(5L, selector.get());
+    Assert.assertEquals(5L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(5L, selector.get());
+    Assert.assertEquals(5L, selector.getLong());
   }
 
   @Test
@@ -131,16 +132,16 @@ public class ExpressionVirtualColumnTest
     final LongColumnSelector selector = ZCONCATX.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(4L, selector.get());
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? 4L : 0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
   }
 
   @Test
@@ -149,16 +150,16 @@ public class ExpressionVirtualColumnTest
     final FloatColumnSelector selector = XPLUSY.makeFloatColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(0.0f, selector.get(), 0.0f);
+    Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(4.0f, selector.get(), 0.0f);
+    Assert.assertEquals(4.0f, selector.getFloat(), 0.0f);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(5.1f, selector.get(), 0.0f);
+    Assert.assertEquals(5.1f, selector.getFloat(), 0.0f);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(5.0f, selector.get(), 0.0f);
+    Assert.assertEquals(5.0f, selector.getFloat(), 0.0f);
   }
 
   @Test
@@ -214,7 +215,7 @@ public class ExpressionVirtualColumnTest
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
     Assert.assertEquals(1, selector.getRow().size());
-    Assert.assertEquals("4", selector.lookupName(selector.getRow().get(0)));
+    Assert.assertEquals(NullHandlingHelper.useDefaultValuesForNull() ? "4" : null, selector.lookupName(selector.getRow().get(0)));
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
     Assert.assertEquals(1, selector.getRow().size());
@@ -268,7 +269,7 @@ public class ExpressionVirtualColumnTest
     final LongColumnSelector selector = CONSTANT_LIKE.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(1L, selector.get());
+    Assert.assertEquals(1L, selector.getLong());
   }
 
   @Test
@@ -277,16 +278,16 @@ public class ExpressionVirtualColumnTest
     final LongColumnSelector selector = ZLIKE.makeLongColumnSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW0);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW1);
-    Assert.assertEquals(0L, selector.get());
+    Assert.assertEquals(0L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW2);
-    Assert.assertEquals(1L, selector.get());
+    Assert.assertEquals(1L, selector.getLong());
 
     COLUMN_SELECTOR_FACTORY.setRow(ROW3);
-    Assert.assertEquals(1L, selector.get());
+    Assert.assertEquals(1L, selector.getLong());
   }
 
   @Test

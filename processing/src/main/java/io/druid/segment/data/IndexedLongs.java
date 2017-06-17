@@ -19,6 +19,13 @@
 
 package io.druid.segment.data;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.historical.HistoricalColumnSelector;
+
 import java.io.Closeable;
 
 /**
@@ -32,4 +39,100 @@ public interface IndexedLongs extends Closeable
 
   @Override
   void close();
+
+  default LongColumnSelector makeLongColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
+  {
+    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector
+    {
+      @Override
+      public long getLong()
+      {
+        return IndexedLongs.this.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return IndexedLongs.this.get(offset);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedLongs.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalLongColumnSelector();
+  }
+
+  default FloatColumnSelector makeFloatColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
+  {
+    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector
+    {
+      @Override
+      public float getFloat()
+      {
+        return (float) IndexedLongs.this.get(offset.getOffset());
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return IndexedLongs.this.get(offset);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedLongs.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalFloatColumnSelector();
+  }
+
+  default DoubleColumnSelector makeDoubleColumnSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
+  {
+    class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector
+    {
+      @Override
+      public double getDouble()
+      {
+        return (double) IndexedLongs.this.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return IndexedLongs.this.get(offset);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("indexed", IndexedLongs.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalDoubleColumnSelector();
+  }
 }

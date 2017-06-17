@@ -20,6 +20,7 @@
 package io.druid.segment.column;
 
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.data.CompressedDoublesIndexedSupplier;
 
 public class DoubleColumn extends AbstractColumn
@@ -30,8 +31,14 @@ public class DoubleColumn extends AbstractColumn
       .setType(ValueType.DOUBLE);
 
   private final CompressedDoublesIndexedSupplier column;
+  private final ImmutableBitmap nullValueBitmap;
 
-  public DoubleColumn(CompressedDoublesIndexedSupplier column) {this.column = column;}
+
+  public DoubleColumn(CompressedDoublesIndexedSupplier column, ImmutableBitmap nullValueBitmap)
+  {
+    this.column = column;
+    this.nullValueBitmap = nullValueBitmap;
+  }
 
   @Override
   public int getLength()
@@ -48,6 +55,7 @@ public class DoubleColumn extends AbstractColumn
   @Override
   public GenericColumn getGenericColumn()
   {
-    return new IndexedDoublesGenericColumn(column.get());
+    return new IndexedDoublesGenericColumn(column.get(), nullValueBitmap);
   }
+
 }

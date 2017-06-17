@@ -343,7 +343,7 @@ public class DetermineHashedPartitionsJob implements Jobby
             }
         ).writeValue(
             out,
-            new Double(aggregate.estimateCardinality()).longValue()
+            aggregate.estimateCardinalityRound()
         );
       }
       finally {

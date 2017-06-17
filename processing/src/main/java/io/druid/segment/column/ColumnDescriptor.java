@@ -112,6 +112,7 @@ public class ColumnDescriptor
   {
     private ValueType valueType = null;
     private Boolean hasMultipleValues = null;
+    private boolean hasNullValues = false;
 
     private final List<ColumnPartSerde> parts = Lists.newArrayList();
 
@@ -135,6 +136,12 @@ public class ColumnDescriptor
       return this;
     }
 
+    public Builder setHasNullValues(boolean hasNullValues)
+    {
+      this.hasNullValues = hasNullValues || this.hasNullValues;
+      return this;
+    }
+
     public Builder addSerde(ColumnPartSerde serde)
     {
       parts.add(serde);
@@ -144,7 +151,11 @@ public class ColumnDescriptor
     public ColumnDescriptor build()
     {
       Preconditions.checkNotNull(valueType, "must specify a valueType");
-      return new ColumnDescriptor(valueType, hasMultipleValues == null ? false : hasMultipleValues, parts);
+      return new ColumnDescriptor(
+          valueType,
+          hasMultipleValues == null ? false : hasMultipleValues,
+          parts
+      );
     }
   }
 }

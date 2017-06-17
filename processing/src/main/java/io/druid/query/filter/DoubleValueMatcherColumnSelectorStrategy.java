@@ -22,7 +22,6 @@ package io.druid.query.filter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.filter.BooleanValueMatcher;
 
 
 public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<DoubleColumnSelector>
@@ -32,7 +31,20 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
   {
     final Double matchVal = DimensionHandlerUtils.convertObjectToDouble(value);
     if (matchVal == null) {
-      return BooleanValueMatcher.of(false);
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return selector.isNull();
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("selector", selector);
+        }
+      };
     }
 
     final long matchValLongBits = Double.doubleToLongBits(matchVal);
@@ -41,7 +53,7 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
       @Override
       public boolean matches()
       {
-        return Double.doubleToLongBits(selector.get()) == matchValLongBits;
+        return Double.doubleToLongBits(selector.getDouble()) == matchValLongBits;
       }
 
       @Override
@@ -63,7 +75,10 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
       @Override
       public boolean matches()
       {
-        return predicate.applyDouble(selector.get());
+        if (selector.isNull()) {
+          return predicate.applyNull();
+        }
+        return predicate.applyDouble(selector.getDouble());
       }
 
       @Override
@@ -78,13 +93,11 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
   @Override
   public ValueGetter makeValueGetter(final DoubleColumnSelector selector)
   {
-    return new ValueGetter()
-    {
-      @Override
-      public String[] get()
-      {
-        return new String[]{ Double.toString(selector.get()) };
+    return () -> {
+      if (selector.isNull()) {
+        return null;
       }
+      return new String[]{Double.toString(selector.getDouble())};
     };
   }
 }

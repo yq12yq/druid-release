@@ -323,9 +323,9 @@ public abstract class BaseFilterTest
           @Override
           public List<String> apply(Cursor input)
           {
-            final DimensionSelector selector = input.makeDimensionSelector(
-                new DefaultDimensionSpec(selectColumn, selectColumn)
-            );
+            final DimensionSelector selector = input
+                .getColumnSelectorFactory()
+                .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
             final List<String> values = Lists.newArrayList();
 
@@ -356,7 +356,7 @@ public abstract class BaseFilterTest
             Aggregator agg = new FilteredAggregatorFactory(
                 new CountAggregatorFactory("count"),
                 maybeOptimize(filter)
-            ).factorize(input);
+            ).factorize(input.getColumnSelectorFactory());
 
             for (; !input.isDone(); input.advance()) {
               agg.aggregate();
@@ -418,9 +418,9 @@ public abstract class BaseFilterTest
           @Override
           public List<String> apply(Cursor input)
           {
-            final DimensionSelector selector = input.makeDimensionSelector(
-                new DefaultDimensionSpec(selectColumn, selectColumn)
-            );
+            final DimensionSelector selector = input
+                .getColumnSelectorFactory()
+                .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
             final List<String> values = Lists.newArrayList();
 

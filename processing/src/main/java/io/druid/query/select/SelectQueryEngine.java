@@ -143,7 +143,7 @@ public class SelectQueryEngine
       if (dimSelector == null) {
         resultMap.put(outputName, null);
       } else {
-        resultMap.put(outputName, dimSelector.get());
+        resultMap.put(outputName, dimSelector.getLong());
       }
     }
   }
@@ -158,7 +158,7 @@ public class SelectQueryEngine
       if (dimSelector == null) {
         resultMap.put(outputName, null);
       } else {
-        resultMap.put(outputName, dimSelector.get());
+        resultMap.put(outputName, dimSelector.getFloat());
       }
     }
   }
@@ -171,7 +171,7 @@ public class SelectQueryEngine
       if (dimSelector == null) {
         resultMap.put(outputName, null);
       } else {
-        resultMap.put(outputName, dimSelector.get());
+        resultMap.put(outputName, dimSelector.getDouble());
       }
     }
   }
@@ -238,13 +238,14 @@ public class SelectQueryEngine
                 query.isDescending()
             );
 
-            final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
+            final LongColumnSelector timestampColumnSelector =
+                cursor.getColumnSelectorFactory().makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
             final List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
                 DimensionHandlerUtils.createColumnSelectorPluses(
                     STRATEGY_FACTORY,
                     Lists.newArrayList(dims),
-                    cursor
+                    cursor.getColumnSelectorFactory()
                 )
             );
 
@@ -254,7 +255,8 @@ public class SelectQueryEngine
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
             for (String metric : metrics) {
-              final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
+              final ObjectColumnSelector metricSelector =
+                  cursor.getColumnSelectorFactory().makeObjectColumnSelector(metric);
               metSelectors.put(metric, metricSelector);
               builder.addMetric(metric);
             }
@@ -297,7 +299,7 @@ public class SelectQueryEngine
   )
   {
     final Map<String, Object> theEvent = Maps.newLinkedHashMap();
-    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.get()));
+    theEvent.put(timestampKey, new DateTime(timestampColumnSelector.getLong()));
 
     for (ColumnSelectorPlus<SelectColumnSelectorStrategy> selectorPlus : selectorPlusList) {
       selectorPlus.getColumnSelectorStrategy().addRowValuesToSelectResult(selectorPlus.getOutputName(), selectorPlus.getSelector(), theEvent);

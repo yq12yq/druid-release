@@ -19,9 +19,11 @@
 
 package io.druid.query.groupby.epinephelinae.column;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -58,7 +60,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
           value
       );
     } else {
-      resultMap.put(selectorPlus.getOutputName(), "");
+      resultMap.put(selectorPlus.getOutputName(), NullHandlingHelper.nullToDefault((String) null));
     }
   }
 
@@ -82,5 +84,28 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
       }
     }
     valuess[columnIndex] = ArrayBasedIndexedInts.of(newIds);
+  }
+
+  @Override
+  public Object getOnlyValue(ColumnValueSelector selector)
+  {
+    final DimensionSelector dimSelector = (DimensionSelector) selector;
+    final IndexedInts row = dimSelector.getRow();
+
+    Preconditions.checkState(row.size() < 2, "Not supported for multi-value dimensions");
+
+    if (row.size() == 0) {
+      return GROUP_BY_MISSING_VALUE;
+    }
+
+    final String value = dimSelector.lookupName(row.get(0));
+    final int dictId = reverseDictionary.getInt(value);
+    if (dictId < 0) {
+      dictionary.add(value);
+      reverseDictionary.put(value, nextId);
+      return nextId++;
+    } else {
+      return dictId;
+    }
   }
 }

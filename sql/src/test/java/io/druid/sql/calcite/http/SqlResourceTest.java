@@ -23,13 +23,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
-import io.druid.server.initialization.ServerConfig;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -80,7 +81,13 @@ public class SqlResourceTest
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     resource = new SqlResource(
         JSON_MAPPER,
-        new PlannerFactory(druidSchema, walker, operatorTable, macroTable, plannerConfig, new ServerConfig())
+        new PlannerFactory(
+            druidSchema,
+            CalciteTests.createMockQueryLifecycleFactory(walker),
+            operatorTable,
+            macroTable,
+            plannerConfig
+        )
     );
   }
 
@@ -162,7 +169,15 @@ public class SqlResourceTest
     ).rhs;
 
     Assert.assertEquals(
+        NullHandlingHelper.useDefaultValuesForNull() ?
         ImmutableList.of(
+            ImmutableMap.of("x", "", "y", ""),
+            ImmutableMap.of("x", "a", "y", "a"),
+            ImmutableMap.of("x", "abc", "y", "abc")
+        ) :
+        ImmutableList.of(
+            // x and y both should be null instead of empty string
+            Maps.transformValues(ImmutableMap.of("x", "", "y", ""), (val) -> null),
             ImmutableMap.of("x", "", "y", ""),
             ImmutableMap.of("x", "a", "y", "a"),
             ImmutableMap.of("x", "abc", "y", "abc")
@@ -182,7 +197,7 @@ public class SqlResourceTest
         ImmutableList.of(
             ImmutableMap.<String, Object>of(
                 "PLAN",
-                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null, finalizingPostAggregatorFactory=null}]])\n"
+                "DruidQueryRel(dataSource=[foo], dimensions=[[]], aggregations=[[Aggregation{virtualColumns=[], aggregatorFactories=[CountAggregatorFactory{name='a0'}], postAggregator=null}]])\n"
             )
         ),
         rows
@@ -203,13 +218,18 @@ public class SqlResourceTest
   @Test
   public void testCannotConvert() throws Exception
   {
-    // TRIM unsupported
-    final QueryInterruptedException exception = doPost(new SqlQuery("SELECT TRIM(dim1) FROM druid.foo", null)).lhs;
+    // SELECT + ORDER unsupported
+    final QueryInterruptedException exception = doPost(
+        new SqlQuery("SELECT dim1 FROM druid.foo ORDER BY dim1", null)
+    ).lhs;
 
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
     Assert.assertEquals(ISE.class.getName(), exception.getErrorClass());
-    Assert.assertTrue(exception.getMessage().contains("Cannot build plan for query: SELECT TRIM(dim1) FROM druid.foo"));
+    Assert.assertTrue(
+        exception.getMessage()
+                 .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
+    );
   }
 
   @Test

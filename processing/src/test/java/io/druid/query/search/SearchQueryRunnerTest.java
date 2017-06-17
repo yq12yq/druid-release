@@ -53,6 +53,7 @@ import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
 import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
@@ -786,7 +787,11 @@ public class SearchQueryRunnerTest
     QueryRunner runner = factory.createRunner(new QueryableIndexSegment("asdf", TestIndex.persistRealtimeAndLoadMMapped(index)));
     List<SearchHit> expectedHits = Lists.newLinkedList();
     expectedHits.add(new SearchHit("table", "table", 1));
-    expectedHits.add(new SearchHit("table", "", 1));
+    if (NullHandlingHelper.useDefaultValuesForNull()) {
+      expectedHits.add(new SearchHit("table", "", 1));
+    } else {
+      expectedHits.add(new SearchHit("table", null, 1));
+    }
     checkSearchQuery(searchQuery, runner, expectedHits);
   }
 

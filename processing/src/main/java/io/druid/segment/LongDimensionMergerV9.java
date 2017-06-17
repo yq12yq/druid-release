@@ -20,14 +20,18 @@
 package io.druid.segment;
 
 import com.google.common.base.Throwables;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.java.util.common.io.Closer;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.IOPeon;
-import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +40,8 @@ import java.util.List;
 
 public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
 {
+  private static final Logger log = new Logger(LongDimensionMergerV9.class);
+
   protected String dimensionName;
   protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
@@ -43,6 +49,9 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   protected final File outDir;
   protected IOPeon ioPeon;
   protected LongColumnSerializer serializer;
+  private MutableBitmap nullRowsBitmap;
+  private int rowCount = 0;
+  private ByteBufferWriter<ImmutableBitmap> nullValueBitmapWriter;
 
   public LongDimensionMergerV9(
       String dimensionName,
@@ -59,6 +68,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
     this.outDir = outDir;
     this.ioPeon = ioPeon;
     this.progress = progress;
+    this.nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
 
     try {
       setupEncodedValueWriter();
@@ -90,19 +100,27 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   @Override
   public void processMergedRow(Long rowValues) throws IOException
   {
+    if (rowValues == null) {
+      nullRowsBitmap.add(rowCount);
+    }
     serializer.serialize(rowValues);
+    rowCount++;
   }
 
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
   {
-    // longs have no indices to write
+    this.nullValueBitmapWriter = IndexMergerV9.createNullRowsBitmapWriter(
+        ioPeon,
+        dimensionName,
+        nullRowsBitmap,
+        indexSpec
+    );
   }
 
   @Override
   public boolean canSkip()
   {
-    // a long column can never be all null
     return false;
   }
 
@@ -112,11 +130,14 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
     serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.LONG);
+    builder.setHasNullValues(!nullRowsBitmap.isEmpty());
     builder.addSerde(
-        LongGenericColumnPartSerde.serializerBuilder()
-                                  .withByteOrder(IndexIO.BYTE_ORDER)
-                                  .withDelegate(serializer)
-                                  .build()
+        LongGenericColumnPartSerdeV2.serializerBuilder()
+                                    .withByteOrder(IndexIO.BYTE_ORDER)
+                                    .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                    .withNullValueBitmapWriter(nullValueBitmapWriter)
+                                    .withDelegate(serializer)
+                                    .build()
     );
     return builder.build();
   }

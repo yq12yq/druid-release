@@ -280,19 +280,19 @@ class WikipediaIrcDecoder implements IrcDecoder
 
 
       @Override
-      public double getDoubleMetric(String metric)
+      public Double getDoubleMetric(String metric)
       {
-        return new Double(metrics.get(metric)).doubleValue();
+        return new Double(metrics.get(metric));
       }
 
       @Override
-      public float getFloatMetric(String metric)
+      public Float getFloatMetric(String metric)
       {
         return metrics.get(metric);
       }
 
       @Override
-      public long getLongMetric(String metric)
+      public Long getLongMetric(String metric)
       {
         return new Float(metrics.get(metric)).longValue();
       }

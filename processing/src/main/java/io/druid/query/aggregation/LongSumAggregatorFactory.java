@@ -29,7 +29,9 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -74,13 +76,18 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumAggregator(getLongColumnSelector(metricFactory));
+    LongColumnSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    return NullHandlingHelper.getNullableAggregator(new LongSumAggregator(longColumnSelector), longColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumBufferAggregator(getLongColumnSelector(metricFactory));
+    LongColumnSelector longColumnSelector = getLongColumnSelector(metricFactory);
+    return NullHandlingHelper.getNullableAggregator(
+        new LongSumBufferAggregator(longColumnSelector),
+        longColumnSelector
+    );
   }
 
   private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
@@ -95,9 +102,22 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (lhs == null) {
+      return rhs;
+    }
+    if (rhs == null) {
+      return lhs;
+    }
     return LongSumAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return NullHandlingHelper.getNullableCombiner(new LongSumAggregateCombiner());
   }
 
   @Override
@@ -184,7 +204,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES;
+    return Longs.BYTES + NullHandlingHelper.extraAggregatorBytes();
   }
 
   @Override

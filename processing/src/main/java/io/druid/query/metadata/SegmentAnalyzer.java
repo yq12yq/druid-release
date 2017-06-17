@@ -269,12 +269,9 @@ public class SegmentAnalyzer
             @Override
             public Long accumulate(Long accumulated, Cursor cursor)
             {
-              DimensionSelector selector = cursor.makeDimensionSelector(
-                  new DefaultDimensionSpec(
-                      columnName,
-                      columnName
-                  )
-              );
+              DimensionSelector selector = cursor
+                  .getColumnSelectorFactory()
+                  .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName));
               if (selector == null) {
                 return accumulated;
               }

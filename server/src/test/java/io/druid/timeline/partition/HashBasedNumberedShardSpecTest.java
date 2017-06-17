@@ -34,6 +34,7 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -230,25 +231,29 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
+    @Nullable
     public Object getRaw(String s)
     {
       return null;
     }
 
     @Override
-    public float getFloatMetric(String s)
+    @Nullable
+    public Float getFloatMetric(String s)
     {
-      return 0;
+      return 0F;
     }
 
     @Override
-    public long getLongMetric(String s)
+    @Nullable
+    public Long getLongMetric(String s)
     {
       return 0L;
     }
 
     @Override
-    public double getDoubleMetric(String metric)
+    @Nullable
+    public Double getDoubleMetric(String metric)
     {
       return 0.0d;
     }

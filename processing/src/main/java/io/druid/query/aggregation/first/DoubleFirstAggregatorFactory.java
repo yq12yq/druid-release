@@ -26,6 +26,8 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.UOE;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -33,9 +35,12 @@ import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -74,20 +79,23 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleFirstAggregator(
+
+    DoubleColumnSelector doubleColumnSelector = metricFactory.makeDoubleColumnSelector(fieldName);
+    return NullHandlingHelper.getNullableAggregator(new DoubleFirstAggregator(
         name,
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeDoubleColumnSelector(fieldName)
-    );
+        doubleColumnSelector
+    ), doubleColumnSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleFirstBufferAggregator(
+    DoubleColumnSelector doubleColumnSelector = metricFactory.makeDoubleColumnSelector(fieldName);
+    return NullHandlingHelper.getNullableAggregator(new DoubleFirstBufferAggregator(
         metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeDoubleColumnSelector(fieldName)
-    );
+        doubleColumnSelector
+    ), doubleColumnSelector);
   }
 
   @Override
@@ -97,9 +105,22 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return TIME_COMPARATOR.compare(lhs, rhs) <= 0 ? lhs : rhs;
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("DoubleFirstAggregatorFactory is not supported during ingestion for rollup");
   }
 
   @Override
@@ -111,7 +132,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        return new DoubleFirstAggregator(name, null, null)
+        return NullHandlingHelper.getNullableAggregator(new DoubleFirstAggregator(name, null, null)
         {
           @Override
           public void aggregate()
@@ -122,14 +143,14 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
               firstValue = pair.rhs;
             }
           }
-        };
+        }, selector);
       }
 
       @Override
       public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        return new DoubleFirstBufferAggregator(null, null)
+        return NullHandlingHelper.getNullableAggregator(new DoubleFirstBufferAggregator(null, null)
         {
           @Override
           public void aggregate(ByteBuffer buf, int position)
@@ -147,7 +168,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
           {
             inspector.visit("selector", selector);
           }
-        };
+        }, selector);
       }
     };
   }
@@ -176,9 +197,10 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  @Nullable
   public Object finalizeComputation(Object object)
   {
-    return ((SerializablePair<Long, Double>) object).rhs;
+    return object == null ? null : ((SerializablePair<Long, Double>) object).rhs;
   }
 
   @Override
@@ -220,7 +242,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Long.BYTES + Double.BYTES;
+    return Long.BYTES + Double.BYTES + NullHandlingHelper.extraAggregatorBytes();
   }
 
   @Override

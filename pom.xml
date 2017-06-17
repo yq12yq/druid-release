@@ -59,7 +59,7 @@
         <!-- Curator cannot be updated to 2.12.0 yet, see https://github.com/druid-io/druid/pull/4103 -->
         <apache.curator.version>2.11.0</apache.curator.version>
         <avatica.version>1.9.0</avatica.version>
-        <calcite.version>1.11.0</calcite.version>
+        <calcite.version>1.12.0</calcite.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
@@ -76,6 +76,7 @@
         <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
         Need to update Druid to use Jackson 2.6+ -->
         <aws.sdk.version>1.10.77</aws.sdk.version>
+	<druid.null.handling.useDefaultValueForNull>true</druid.null.handling.useDefaultValueForNull>
     </properties>
 
     <modules>
@@ -129,7 +130,6 @@
         <module>extensions-contrib/virtual-columns</module>
         <!--<module>extensions-contrib/thrift-extensions</module>-->
         <module>extensions-contrib/ambari-metrics-emitter</module>
-        <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
         <!-- distribution packaging -->
@@ -955,6 +955,7 @@
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                         <argLine>-Xmx3000m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+			    -Ddruid.null.handling.useDefaultValueForNull=${druid.null.handling.useDefaultValueForNull}
                         </argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>

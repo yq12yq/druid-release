@@ -20,26 +20,28 @@
 package io.druid.segment.serde;
 
 import com.google.common.base.Supplier;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.IndexedDoublesGenericColumn;
 import io.druid.segment.data.CompressedDoublesIndexedSupplier;
 
-import java.nio.ByteOrder;
-
-
 public class DoubleGenericColumnSupplier implements Supplier<GenericColumn>
 {
   private final CompressedDoublesIndexedSupplier column;
-  private final ByteOrder byteOrder;
-  public DoubleGenericColumnSupplier(CompressedDoublesIndexedSupplier column, ByteOrder byteOrder) {
+  private final ImmutableBitmap nullValueBitmap;
 
+  public DoubleGenericColumnSupplier(
+      CompressedDoublesIndexedSupplier column,
+      ImmutableBitmap nullValueBitmap
+  )
+  {
     this.column = column;
-    this.byteOrder = byteOrder;
+    this.nullValueBitmap = nullValueBitmap;
   }
 
   @Override
   public GenericColumn get()
   {
-    return new IndexedDoublesGenericColumn(column.get());
+    return new IndexedDoublesGenericColumn(column.get(), nullValueBitmap);
   }
 }

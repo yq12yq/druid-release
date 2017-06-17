@@ -60,6 +60,7 @@ import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
@@ -348,7 +349,7 @@ public class GroupByQuery extends BaseQuery<Row>
         throw new IAE("When forcing limit push down, a limit spec must be provided.");
       }
 
-      if (((DefaultLimitSpec) limitSpec).getLimit() == Integer.MAX_VALUE) {
+      if (!((DefaultLimitSpec) limitSpec).isLimited()) {
         throw new IAE("When forcing limit push down, the provided limit spec must have a limit.");
       }
 
@@ -373,7 +374,7 @@ public class GroupByQuery extends BaseQuery<Row>
       DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) limitSpec;
 
       // If only applying an orderby without a limit, don't try to push down
-      if (defaultLimitSpec.getLimit() == Integer.MAX_VALUE) {
+      if (!defaultLimitSpec.isLimited()) {
         return false;
       }
 
@@ -572,19 +573,19 @@ public class GroupByQuery extends BaseQuery<Row>
     for (DimensionSpec dimension : dimensions) {
       final int dimCompare;
       if (dimension.getOutputType() == ValueType.LONG) {
-        dimCompare = Long.compare(
-            ((Number) lhs.getRaw(dimension.getOutputName())).longValue(),
-            ((Number) rhs.getRaw(dimension.getOutputName())).longValue()
+        dimCompare = Comparators.<Long>naturalNullsFirst().compare(
+            DimensionHandlerUtils.convertObjectToLong(lhs.getRaw(dimension.getOutputName())),
+            DimensionHandlerUtils.convertObjectToLong(rhs.getRaw(dimension.getOutputName()))
         );
       } else if (dimension.getOutputType() == ValueType.FLOAT) {
-        dimCompare = Float.compare(
-            ((Number) lhs.getRaw(dimension.getOutputName())).floatValue(),
-            ((Number) rhs.getRaw(dimension.getOutputName())).floatValue()
+        dimCompare = Comparators.<Float>naturalNullsFirst().compare(
+            DimensionHandlerUtils.convertObjectToFloat(lhs.getRaw(dimension.getOutputName())),
+            DimensionHandlerUtils.convertObjectToFloat(rhs.getRaw(dimension.getOutputName()))
         );
       } else if (dimension.getOutputType() == ValueType.DOUBLE) {
-        dimCompare = Double.compare(
-            ((Number) lhs.getRaw(dimension.getOutputName())).doubleValue(),
-            ((Number) rhs.getRaw(dimension.getOutputName())).doubleValue()
+        dimCompare = Comparators.<Double>naturalNullsFirst().compare(
+            DimensionHandlerUtils.convertObjectToDouble(lhs.getRaw(dimension.getOutputName())),
+            DimensionHandlerUtils.convertObjectToDouble(rhs.getRaw(dimension.getOutputName()))
         );
       } else {
         dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(

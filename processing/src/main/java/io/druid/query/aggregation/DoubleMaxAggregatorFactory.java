@@ -25,7 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.NullHandlingHelper;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -35,7 +38,6 @@ import java.util.Objects;
  */
 public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
 {
-
   @JsonCreator
   public DoubleMaxAggregatorFactory(
       @JsonProperty("name") String name,
@@ -55,19 +57,40 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxAggregator(getDoubleColumnSelector(metricFactory, Double.NEGATIVE_INFINITY));
+    DoubleColumnSelector doubleColumnSelector = getDoubleColumnSelector(metricFactory, Double.NEGATIVE_INFINITY);
+    return NullHandlingHelper.getNullableAggregator(
+        new DoubleMaxAggregator(doubleColumnSelector),
+        doubleColumnSelector
+    );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxBufferAggregator(getDoubleColumnSelector(metricFactory, Double.NEGATIVE_INFINITY));
+    DoubleColumnSelector doubleColumnSelector = getDoubleColumnSelector(metricFactory, Double.NEGATIVE_INFINITY);
+    return NullHandlingHelper.getNullableAggregator(
+        new DoubleMaxBufferAggregator(doubleColumnSelector),
+        doubleColumnSelector
+    );
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  @Nullable
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (rhs == null) {
+      return lhs;
+    }
+    if (lhs == null) {
+      return rhs;
+    }
     return DoubleMaxAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return NullHandlingHelper.getNullableCombiner(new DoubleMaxAggregateCombiner());
   }
 
   @Override
