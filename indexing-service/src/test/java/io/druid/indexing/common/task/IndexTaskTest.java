@@ -46,7 +46,6 @@ import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -108,7 +107,6 @@ public class IndexTaskTest
 
   private final IndexSpec indexSpec;
   private final ObjectMapper jsonMapper;
-  private IndexMerger indexMerger;
   private IndexMergerV9 indexMergerV9;
   private IndexIO indexIO;
   private volatile int segmentAllocatePartitionCounter;
@@ -118,7 +116,6 @@ public class IndexTaskTest
     indexSpec = new IndexSpec();
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-    indexMerger = testUtils.getTestIndexMerger();
     indexMergerV9 = testUtils.getTestIndexMergerV9();
     indexIO = testUtils.getTestIndexIO();
   }
@@ -676,7 +673,7 @@ public class IndexTaskTest
       final Set<String> dimensions = new HashSet<>(segment.getDimensions());
 
       Assert.assertTrue(
-          StringUtils.safeFormat("Actual dimensions: %s", dimensions),
+          StringUtils.format("Actual dimensions: %s", dimensions),
           dimensions.equals(Sets.newHashSet("dim", "column_3")) ||
           dimensions.equals(Sets.newHashSet("column_2", "column_3"))
       );
@@ -810,7 +807,7 @@ public class IndexTaskTest
             throw new UnsupportedOperationException();
           }
         }, null, null, null, null, null, null, null, null, null, null, jsonMapper, temporaryFolder.newFolder(),
-            indexMerger, indexIO, null, null, indexMergerV9
+            indexIO, null, null, indexMergerV9
         )
     );
 

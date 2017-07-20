@@ -36,7 +36,6 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
@@ -83,7 +82,6 @@ public class TaskToolbox
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
   private final File taskWorkDir;
-  private final IndexMerger indexMerger;
   private final IndexIO indexIO;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -106,7 +104,6 @@ public class TaskToolbox
       SegmentLoader segmentLoader,
       ObjectMapper objectMapper,
       File taskWorkDir,
-      IndexMerger indexMerger,
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
@@ -129,7 +126,6 @@ public class TaskToolbox
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
     this.taskWorkDir = taskWorkDir;
-    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
     this.cacheConfig = cacheConfig;
@@ -244,11 +240,6 @@ public class TaskToolbox
   public IndexIO getIndexIO()
   {
     return indexIO;
-  }
-
-  public IndexMerger getIndexMerger()
-  {
-    return indexMerger;
   }
 
   public Cache getCache()

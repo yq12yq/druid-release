@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -78,7 +79,7 @@ public class ParserUtils
     Set<String> uniqueNames = Sets.newHashSet();
 
     for (String fieldName : fieldNames) {
-      String next = fieldName.toLowerCase();
+      String next = StringUtils.toLowerCase(fieldName);
       if (uniqueNames.contains(next)) {
         duplicates.add(next);
       }

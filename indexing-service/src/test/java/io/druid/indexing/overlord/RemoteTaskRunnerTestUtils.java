@@ -38,6 +38,7 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -56,9 +57,9 @@ public class RemoteTaskRunnerTestUtils
 {
   static final Joiner joiner = Joiner.on("/");
   static final String basePath = "/test/druid";
-  static final String announcementsPath = String.format("%s/indexer/announcements", basePath);
-  static final String tasksPath = String.format("%s/indexer/tasks", basePath);
-  static final String statusPath = String.format("%s/indexer/status", basePath);
+  static final String announcementsPath = StringUtils.format("%s/indexer/announcements", basePath);
+  static final String tasksPath = StringUtils.format("%s/indexer/tasks", basePath);
+  static final String statusPath = StringUtils.format("%s/indexer/status", basePath);
   static final TaskLocation DUMMY_LOCATION = TaskLocation.create("dummy", 9000);
 
   private TestingCluster testingCluster;

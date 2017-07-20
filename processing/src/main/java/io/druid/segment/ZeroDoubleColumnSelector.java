@@ -19,15 +19,31 @@
 
 package io.druid.segment;
 
-import java.io.File;
-import java.io.IOException;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-/**
- */
-public interface MetricColumnSerializer
+public final class ZeroDoubleColumnSelector implements DoubleColumnSelector
 {
-  public void open() throws IOException;
-  public void serialize(Object aggs) throws IOException;
-  public void close() throws IOException;
-  public void closeFile(File outFile) throws IOException;
+  private static final ZeroDoubleColumnSelector INSTANCE = new ZeroDoubleColumnSelector();
+
+  private ZeroDoubleColumnSelector()
+  {
+    // No instantiation.
+  }
+
+  public static ZeroDoubleColumnSelector instance()
+  {
+    return INSTANCE;
+  }
+
+  @Override
+  public double get()
+  {
+    return 0.0d;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // nothing to inspect
+  }
 }

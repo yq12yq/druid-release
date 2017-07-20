@@ -86,7 +86,7 @@ public class SchemalessIndexTest
   private static final Map<Integer, Map<Integer, QueryableIndex>> mergedIndexes = Maps.newHashMap();
   private static final List<QueryableIndex> rowPersistedIndexes = Lists.newArrayList();
 
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   private static IncrementalIndex index = null;
@@ -389,7 +389,7 @@ public class SchemalessIndexTest
     }
   }
 
-  private static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
+  public static IncrementalIndex makeIncrementalIndex(final String resourceFilename, AggregatorFactory[] aggs)
   {
     URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     log.info("Realtime loading resource[%s]", resource);

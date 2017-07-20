@@ -34,6 +34,7 @@ import io.druid.client.DirectDruidClient;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.ManageLifecycle;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
@@ -526,7 +527,8 @@ public class DruidSchema extends AbstractSchema
 
       ValueType valueType;
       try {
-        valueType = ValueType.valueOf(entry.getValue().getType().toUpperCase());
+
+        valueType = ValueType.valueOf(StringUtils.toUpperCase(entry.getValue().getType()));
       }
       catch (IllegalArgumentException e) {
         // Assume unrecognized types are some flavor of COMPLEX. This throws away information about exactly

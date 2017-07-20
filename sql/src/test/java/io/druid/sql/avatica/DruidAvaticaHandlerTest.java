@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
@@ -131,7 +132,7 @@ public class DruidAvaticaHandlerTest
     server = new Server(new InetSocketAddress("127.0.0.1", port));
     server.setHandler(handler);
     server.start();
-    url = String.format(
+    url = StringUtils.format(
         "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
         port,
         DruidAvaticaHandler.AVATICA_PATH
@@ -348,8 +349,8 @@ public class DruidAvaticaHandlerTest
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m1"),
-                Pair.of("DATA_TYPE", Types.FLOAT),
-                Pair.of("TYPE_NAME", "FLOAT"),
+                Pair.of("DATA_TYPE", Types.DOUBLE),
+                Pair.of("TYPE_NAME", "DOUBLE"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
             ROW(
@@ -376,7 +377,7 @@ public class DruidAvaticaHandlerTest
         Executors.newFixedThreadPool(AVATICA_CONFIG.getMaxStatementsPerConnection())
     );
     for (int i = 0; i < 2000; i++) {
-      final String query = String.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
+      final String query = StringUtils.format("SELECT COUNT(*) + %s AS ci FROM foo", i);
       futures.add(
           exec.submit(() -> {
             try (
@@ -571,7 +572,7 @@ public class DruidAvaticaHandlerTest
     Server smallFrameServer = new Server(new InetSocketAddress("127.0.0.1", port));
     smallFrameServer.setHandler(handler);
     smallFrameServer.start();
-    String smallFrameUrl = String.format(
+    String smallFrameUrl = StringUtils.format(
         "jdbc:avatica:remote:url=http://127.0.0.1:%d%s",
         port,
         DruidAvaticaHandler.AVATICA_PATH

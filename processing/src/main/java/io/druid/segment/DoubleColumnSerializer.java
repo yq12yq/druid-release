@@ -19,73 +19,83 @@
 
 package io.druid.segment;
 
-import com.google.common.io.FileWriteMode;
-import com.google.common.io.Files;
+
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.FloatSupplierSerializer;
+import io.druid.segment.data.DoubleSupplierSerializer;
 import io.druid.segment.data.IOPeon;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.ByteOrder;
+import java.nio.channels.WritableByteChannel;
 
-/**
- */
-public class FloatMetricColumnSerializer implements MetricColumnSerializer
+public class DoubleColumnSerializer implements GenericColumnSerializer
 {
-  private final String metricName;
-  private final IOPeon ioPeon;
-  private final File outDir;
-  private final CompressedObjectStrategy.CompressionStrategy compression;
-
-  private FloatSupplierSerializer writer;
-
-  public FloatMetricColumnSerializer(
-      String metricName,
-      File outDir,
+  public static DoubleColumnSerializer create(
       IOPeon ioPeon,
+      String filenameBase,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
-    this.metricName = metricName;
+    return new DoubleColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression);
+  }
+
+  private final IOPeon ioPeon;
+  private final String filenameBase;
+  private final ByteOrder byteOrder;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private DoubleSupplierSerializer writer;
+
+  public DoubleColumnSerializer(
+      IOPeon ioPeon,
+      String filenameBase,
+      ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression
+  )
+  {
     this.ioPeon = ioPeon;
-    this.outDir = outDir;
+    this.filenameBase = filenameBase;
+    this.byteOrder = byteOrder;
     this.compression = compression;
   }
 
   @Override
   public void open() throws IOException
   {
-    writer = CompressionFactory.getFloatSerializer(
-        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER, compression
+    writer = CompressionFactory.getDoubleSerializer(
+        ioPeon,
+        StringUtils.format("%s.double_column", filenameBase),
+        byteOrder,
+        compression
     );
-
     writer.open();
   }
 
   @Override
   public void serialize(Object obj) throws IOException
   {
-    float val = (obj == null) ? 0 : ((Number) obj).floatValue();
+    double val = (obj == null) ? 0 : ((Number) obj).doubleValue();
     writer.add(val);
   }
 
   @Override
   public void close() throws IOException
   {
-    final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
-    closeFile(outFile);
+    writer.close();
   }
 
   @Override
-  public void closeFile(final File outFile) throws IOException
+  public long getSerializedSize()
   {
-    outFile.delete();
-    MetricHolder.writeFloatMetric(
-        Files.asByteSink(outFile, FileWriteMode.APPEND), metricName, writer
-    );
-    IndexIO.checkFileSize(outFile);
-
-    writer = null;
+    return writer.getSerializedSize();
   }
+
+  @Override
+  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  {
+    writer.writeToChannel(channel, smoosher);
+  }
+
 }

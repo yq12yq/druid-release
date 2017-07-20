@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -73,7 +74,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return String.format("gs://%s/%s", config.getBucket(), config.getPrefix());
+    return StringUtils.format("gs://%s/%s", config.getBucket(), config.getPrefix());
   }
 
   @Override
