@@ -60,6 +60,7 @@
         <apache.curator.version>2.11.0</apache.curator.version>
         <avatica.version>1.9.0</avatica.version>
         <calcite.version>1.12.0</calcite.version>
+        <zookeeper.version>3.4.10</zookeeper.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
@@ -262,7 +263,7 @@
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
-                <version>3.4.10</version>
+                <version>${zookeeper.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
