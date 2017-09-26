@@ -450,10 +450,10 @@ public class CalciteQueryTest
   {
     testQuery(
         "EXPLAIN PLAN FOR SELECT * FROM druid.foo",
-        ImmutableList.of(),
+        ImmutableList.<Query>of(),
         ImmutableList.of(
             new Object[]{
-                "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}])\n"
+                "DruidQueryRel(dataSource=[foo])\n"
             }
         )
     );
@@ -724,7 +724,7 @@ public class CalciteQueryTest
   @Test
   public void testExplainSelfJoinWithFallback() throws Exception
   {
-    String emptyStringEq = NullHandlingHelper.useDefaultValuesForNull() ? null : "\"\"";
+    String emptyStringEq = NullHandlingHelper.useDefaultValuesForNull() ? null : "";
     testQuery(
         PLANNER_CONFIG_FALLBACK,
         "EXPLAIN PLAN FOR\n"
@@ -733,15 +733,13 @@ public class CalciteQueryTest
         + "  druid.foo x INNER JOIN druid.foo y ON x.dim1 = y.dim2\n"
         + "WHERE\n"
         + "  x.dim1 <> ''",
-        ImmutableList.of(),
+        ImmutableList.<Query>of(),
         ImmutableList.of(
             new Object[]{
                 "BindableProject(dim1=[$9], dim10=[$2], dim2=[$3])\n"
                 + "  BindableJoin(condition=[=($9, $3)], joinType=[inner])\n"
-                + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}])\n"
-                + "    DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":"
-                + emptyStringEq
-                + ",\"extractionFn\":null}},\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}])\n"
+                + "    DruidQueryRel(dataSource=[foo])\n"
+                + "    DruidQueryRel(dataSource=[foo], filter=[!dim1 = "+emptyStringEq+"])\n"
             }
         )
     );
@@ -3193,7 +3191,7 @@ public class CalciteQueryTest
                             new LongSumAggregatorFactory("a0", "a0"),
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a1"),
-                                NOT(SELECTOR("d0", null, null))
+                                NOT(SELECTOR("d1", null, null))
                             )
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -3567,29 +3565,6 @@ public class CalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{2L}
-        )
-    );
-  }
-
-  @Test
-  public void testExplainExactCountDistinctOfSemiJoinResult() throws Exception
-  {
-    testQuery(
-        "EXPLAIN PLAN FOR SELECT COUNT(*)\n"
-        + "FROM (\n"
-        + "  SELECT DISTINCT dim2\n"
-        + "  FROM druid.foo\n"
-        + "  WHERE SUBSTRING(dim2, 1, 1) IN (\n"
-        + "    SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo WHERE dim1 IS NOT NULL\n"
-        + "  )\n"
-        + ")",
-        ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{
-                "DruidOuterQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[],\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}])\n"
-                + "  DruidSemiJoin(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"__subquery__\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim2\",\"outputName\":\"d0\",\"outputType\":\"STRING\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}], leftExpressions=[[DruidExpression{simpleExtraction=null, expression='substring(\"dim2\", 0, 1)'}]], rightKeys=[[0]])\n"
-                + "    DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"filter\":{\"type\":\"not\",\"field\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":null,\"extractionFn\":null}},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"extraction\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\",\"extractionFn\":{\"type\":\"substring\",\"index\":0,\"length\":1}}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807},\"descending\":false}])\n"
-            }
         )
     );
   }
