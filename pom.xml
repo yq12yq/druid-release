@@ -79,6 +79,25 @@
         <aws.sdk.version>1.10.77</aws.sdk.version>
 	<druid.null.handling.useDefaultValueForNull>true</druid.null.handling.useDefaultValueForNull>
     </properties>
+    
+    <repositories>
+      <repository>
+        <id>apache.snapshots</id>
+        <name>Apache Snapshot Repository</name>
+        <url>http://repository.apache.org/snapshots</url>
+        <releases>
+          <enabled>false</enabled>
+        </releases>
+      </repository>
+      <repository>
+        <id>cloudera</id>
+        <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+      </repository>
+      <repository>
+        <id>mapr</id>
+        <url>http://repository.mapr.com/maven</url>
+      </repository>
+    </repositories>
 
     <modules>
         <module>api</module>
