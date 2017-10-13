@@ -254,6 +254,9 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
           @Override
           public Float get()
           {
+            if (columnVals.isNull(offset.getOffset())) {
+              return null;
+            }
             return columnVals.getFloatSingleValueRow(offset.getOffset());
           }
         };
@@ -270,6 +273,9 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
           @Override
           public Double get()
           {
+            if (columnVals.isNull(offset.getOffset())) {
+              return null;
+            }
             return columnVals.getDoubleSingleValueRow(offset.getOffset());
           }
         };
@@ -286,6 +292,9 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
           @Override
           public Long get()
           {
+            if (columnVals.isNull(offset.getOffset())) {
+              return null;
+            }
             return columnVals.getLongSingleValueRow(offset.getOffset());
           }
         };
