@@ -25,6 +25,7 @@ import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.segment.NullHandlingHelper;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -130,6 +131,9 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public String apply(Object value)
   {
+    if (!NullHandlingHelper.useDefaultValuesForNull() && value == null) {
+      return null;
+    }
     if (asMillis && value instanceof String) {
       final Long theLong = GuavaUtils.tryParseLong((String) value);
       return theLong == null ? apply(new DateTime(value).getMillis()) : apply(theLong.longValue());

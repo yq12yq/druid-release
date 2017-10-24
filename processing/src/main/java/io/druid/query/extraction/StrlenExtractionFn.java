@@ -20,6 +20,7 @@
 package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import io.druid.segment.NullHandlingHelper;
 
 public class StrlenExtractionFn extends DimExtractionFn
 {
@@ -38,6 +39,9 @@ public class StrlenExtractionFn extends DimExtractionFn
   @Override
   public String apply(String value)
   {
+    if (!NullHandlingHelper.useDefaultValuesForNull() && value == null) {
+      return null;
+    }
     return String.valueOf(value == null ? 0 : value.length());
   }
 

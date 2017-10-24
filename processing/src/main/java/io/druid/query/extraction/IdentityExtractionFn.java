@@ -19,7 +19,7 @@
 
 package io.druid.query.extraction;
 
-import com.google.common.base.Strings;
+import io.druid.segment.NullHandlingHelper;
 
 public class IdentityExtractionFn implements ExtractionFn
 {
@@ -39,13 +39,13 @@ public class IdentityExtractionFn implements ExtractionFn
   @Override
   public String apply(Object value)
   {
-    return value == null ? null : Strings.emptyToNull(value.toString());
+    return value == null ? null : NullHandlingHelper.defaultToNull(value.toString());
   }
 
   @Override
   public String apply(String value)
   {
-    return Strings.emptyToNull(value);
+    return NullHandlingHelper.defaultToNull(value);
   }
 
   @Override
