@@ -45,6 +45,9 @@ public class ServerConfig
   @Min(1)
   private long maxScatterGatherBytes = Long.MAX_VALUE;
 
+  @JsonProperty
+  private int maxRequestHeaderSize = 8 * 1024;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -63,6 +66,11 @@ public class ServerConfig
   public long getMaxScatterGatherBytes()
   {
     return maxScatterGatherBytes;
+  }
+
+  public int getMaxRequestHeaderSize()
+  {
+    return maxRequestHeaderSize;
   }
 
   @Override
