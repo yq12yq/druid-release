@@ -967,6 +967,7 @@
                     </signaturesFiles>
                     <excludes>
                         <exclude>io/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
+                        <exclude>io/druid/java/util/common/DateTimes.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>
