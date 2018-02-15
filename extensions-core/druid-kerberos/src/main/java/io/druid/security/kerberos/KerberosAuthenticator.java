@@ -338,7 +338,7 @@ public class KerberosAuthenticator implements Authenticator
                                  getCookieDomain(),
                                  getCookiePath(),
                                  token.getExpires(),
-                                 token.isExpired() || token.getExpires() <= 0,
+                                 !token.isExpired() && token.getExpires() > 0,
                                  isHttps
                 );
               }
