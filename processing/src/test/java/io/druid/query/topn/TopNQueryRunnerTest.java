@@ -30,6 +30,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import io.druid.collections.StupidPool;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
@@ -4231,10 +4232,15 @@ public class TopNQueryRunnerTest
   public void testTopNWithExtractionFilterAndFilteredAggregatorCaseNoExistingValue()
   {
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("", "NULL");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
+    LookupExtractionFn lookupExtractionFn;
+    if (NullHandling.replaceWithDefault()) {
+      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
+      extractionMap.put("", "NULL");
+    } else {
+      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, false);
+    }
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -4304,10 +4310,16 @@ public class TopNQueryRunnerTest
   public void testTopNWithExtractionFilterNoExistingValue()
   {
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("", "NULL");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
+    LookupExtractionFn lookupExtractionFn;
+    if (NullHandling.replaceWithDefault()) {
+      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
+      extractionMap.put("", "NULL");
+    } else {
+      extractionMap.put("", "NOT_USED");
+      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, true);
+    }
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)

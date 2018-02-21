@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.primitives.Doubles;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
@@ -57,7 +56,7 @@ public class DoubleMaxAggregationTest
   @Test
   public void testDoubleMaxAggregator()
   {
-    DoubleMaxAggregator agg = (DoubleMaxAggregator) doubleMaxAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = doubleMaxAggFactory.factorize(colSelectorFactory);
 
     aggregate(selector, agg);
     aggregate(selector, agg);
@@ -72,9 +71,9 @@ public class DoubleMaxAggregationTest
   @Test
   public void testDoubleMaxBufferAggregator()
   {
-    DoubleMaxBufferAggregator agg = (DoubleMaxBufferAggregator) doubleMaxAggFactory.factorizeBuffered(colSelectorFactory);
+    BufferAggregator agg = doubleMaxAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Doubles.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selector, agg, buffer, 0);
@@ -106,13 +105,13 @@ public class DoubleMaxAggregationTest
     Assert.assertFalse(one.equals(two));
   }
 
-  private void aggregate(TestDoubleColumnSelectorImpl selector, DoubleMaxAggregator agg)
+  private void aggregate(TestDoubleColumnSelectorImpl selector, Aggregator agg)
   {
     agg.aggregate();
     selector.increment();
   }
 
-  private void aggregate(TestDoubleColumnSelectorImpl selector, DoubleMaxBufferAggregator agg, ByteBuffer buff, int position)
+  private void aggregate(TestDoubleColumnSelectorImpl selector, BufferAggregator agg, ByteBuffer buff, int position)
   {
     agg.aggregate(buff, position);
     selector.increment();

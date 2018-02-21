@@ -19,12 +19,32 @@
 
 package io.druid.query.filter;
 
-
+@SuppressWarnings("unused")
 public interface DruidDoublePredicate
 {
   DruidDoublePredicate ALWAYS_FALSE = input -> false;
 
   DruidDoublePredicate ALWAYS_TRUE = input -> true;
 
+  DruidDoublePredicate MATCH_NULL_ONLY = new DruidDoublePredicate()
+  {
+    @Override
+    public boolean applyDouble(double input)
+    {
+      return false;
+    }
+
+    @Override
+    public boolean applyNull()
+    {
+      return true;
+    }
+  };
+
   boolean applyDouble(double input);
+
+  default boolean applyNull()
+  {
+    return false;
+  }
 }

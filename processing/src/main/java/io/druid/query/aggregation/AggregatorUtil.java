@@ -27,9 +27,6 @@ import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.BaseDoubleColumnValueSelector;
-import io.druid.segment.BaseFloatColumnValueSelector;
-import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DoubleColumnSelector;
@@ -136,7 +133,7 @@ public class AggregatorUtil
     return new Pair(condensedAggs, condensedPostAggs);
   }
 
-  public static BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
+  public static ColumnValueSelector makeColumnValueSelectorWithFloatDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
       final String fieldName,
@@ -156,7 +153,7 @@ public class AggregatorUtil
         public float getFloat()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : (float) exprEval.asDouble();
+          return exprEval.isNumericNull() ? nullValue : (float) exprEval.asDouble();
         }
 
         @Override
@@ -164,13 +161,20 @@ public class AggregatorUtil
         {
           inspector.visit("baseSelector", baseSelector);
         }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval exprEval = baseSelector.getObject();
+          return exprEval == null || exprEval.isNumericNull();
+        }
       }
       return new ExpressionFloatColumnSelector();
     }
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
-  public static BaseLongColumnValueSelector makeColumnValueSelectorWithLongDefault(
+  public static ColumnValueSelector makeColumnValueSelectorWithLongDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
       final String fieldName,
@@ -190,7 +194,7 @@ public class AggregatorUtil
         public long getLong()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : exprEval.asLong();
+          return exprEval.isNumericNull() ? nullValue : exprEval.asLong();
         }
 
         @Override
@@ -198,13 +202,20 @@ public class AggregatorUtil
         {
           inspector.visit("baseSelector", baseSelector);
         }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval exprEval = baseSelector.getObject();
+          return exprEval == null || exprEval.isNumericNull();
+        }
       }
       return new ExpressionLongColumnSelector();
     }
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
-  public static BaseDoubleColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
+  public static ColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
       final String fieldName,
@@ -224,13 +235,20 @@ public class AggregatorUtil
         public double getDouble()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : exprEval.asDouble();
+          return exprEval.isNumericNull() ? nullValue : exprEval.asDouble();
         }
 
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("baseSelector", baseSelector);
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval exprEval = baseSelector.getObject();
+          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionDoubleColumnSelector();

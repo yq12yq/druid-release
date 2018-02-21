@@ -19,18 +19,18 @@
 
 package io.druid.math.expr;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Ints;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.IAE;
+
+import javax.annotation.Nullable;
 
 /**
  */
 public abstract class ExprEval<T>
 {
-  public static ExprEval ofLong(Number longValue)
+  public static ExprEval ofLong(@Nullable Number longValue)
   {
     return new LongExprEval(longValue);
   }
@@ -40,7 +40,7 @@ public abstract class ExprEval<T>
     return new LongExprEval(longValue);
   }
 
-  public static ExprEval ofDouble(Number doubleValue)
+  public static ExprEval ofDouble(@Nullable Number doubleValue)
   {
     return new DoubleExprEval(doubleValue);
   }
@@ -50,7 +50,7 @@ public abstract class ExprEval<T>
     return new DoubleExprEval(doubleValue);
   }
 
-  public static ExprEval of(String stringValue)
+  public static ExprEval of(@Nullable String stringValue)
   {
     return new StringExprEval(stringValue);
   }
@@ -69,7 +69,7 @@ public abstract class ExprEval<T>
     }
   }
 
-  public static ExprEval bestEffortOf(Object val)
+  public static ExprEval bestEffortOf(@Nullable Object val)
   {
     if (val instanceof ExprEval) {
       return (ExprEval) val;
@@ -83,6 +83,7 @@ public abstract class ExprEval<T>
     return new StringExprEval(val == null ? null : String.valueOf(val));
   }
 
+  @Nullable
   final T value;
 
   private ExprEval(T value)
@@ -97,10 +98,10 @@ public abstract class ExprEval<T>
     return value;
   }
 
-  public boolean isNull()
-  {
-    return value == null;
-  }
+  /**
+   * returns true if numeric primitive value for this ExprEval is null, otherwise false.
+   */
+  public abstract boolean isNumericNull();
 
   public abstract int asInt();
 
@@ -108,6 +109,7 @@ public abstract class ExprEval<T>
 
   public abstract double asDouble();
 
+  @Nullable
   public String asString()
   {
     return value == null ? null : String.valueOf(value);
@@ -122,7 +124,7 @@ public abstract class ExprEval<T>
   private static abstract class NumericExprEval extends ExprEval<Number>
   {
 
-    private NumericExprEval(Number value)
+    private NumericExprEval(@Nullable Number value)
     {
       super(value);
     }
@@ -144,13 +146,19 @@ public abstract class ExprEval<T>
     {
       return value.doubleValue();
     }
+
+    @Override
+    public boolean isNumericNull()
+    {
+      return value == null;
+    }
   }
 
   private static class DoubleExprEval extends NumericExprEval
   {
-    private DoubleExprEval(Number value)
+    private DoubleExprEval(@Nullable Number value)
     {
-      super(Preconditions.checkNotNull(value, "value"));
+      super(value == null ? NullHandling.defaultDoubleValue() : value);
     }
 
     @Override
@@ -172,7 +180,7 @@ public abstract class ExprEval<T>
         case DOUBLE:
           return this;
         case LONG:
-          return ExprEval.of(asLong());
+          return ExprEval.of(value == null ? null : asLong());
         case STRING:
           return ExprEval.of(asString());
       }
@@ -188,9 +196,9 @@ public abstract class ExprEval<T>
 
   private static class LongExprEval extends NumericExprEval
   {
-    private LongExprEval(Number value)
+    private LongExprEval(@Nullable Number value)
     {
-      super(Preconditions.checkNotNull(value, "value"));
+      super(value == null ? NullHandling.defaultLongValue() : value);
     }
 
     @Override
@@ -210,7 +218,7 @@ public abstract class ExprEval<T>
     {
       switch (castTo) {
         case DOUBLE:
-          return ExprEval.of(asDouble());
+          return ExprEval.of(value == null ? null : asDouble());
         case LONG:
           return this;
         case STRING:
@@ -228,9 +236,11 @@ public abstract class ExprEval<T>
 
   private static class StringExprEval extends ExprEval<String>
   {
-    private StringExprEval(String value)
+    private Number numericVal;
+
+    private StringExprEval(@Nullable String value)
     {
-      super(Strings.emptyToNull(value));
+      super(NullHandling.emptyToNullIfNeeded(value));
     }
 
     @Override
@@ -242,31 +252,63 @@ public abstract class ExprEval<T>
     @Override
     public final int asInt()
     {
-      if (value == null) {
+      Number number = asNumber();
+      if (number == null) {
+        assert NullHandling.replaceWithDefault();
         return 0;
       }
-
-      final Integer theInt = Ints.tryParse(value);
-      return theInt == null ? 0 : theInt;
+      return number.intValue();
     }
 
     @Override
     public final long asLong()
     {
-      // GuavaUtils.tryParseLong handles nulls, no need for special null handling here.
-      final Long theLong = GuavaUtils.tryParseLong(value);
-      return theLong == null ? 0L : theLong;
+      Number number = asNumber();
+      if (number == null) {
+        assert NullHandling.replaceWithDefault();
+        return 0L;
+      }
+      return number.longValue();
     }
 
     @Override
     public final double asDouble()
     {
+      Number number = asNumber();
+      if (number == null) {
+        assert NullHandling.replaceWithDefault();
+        return 0.0d;
+      }
+      return number.doubleValue();
+    }
+
+    @Nullable
+    private Number asNumber()
+    {
       if (value == null) {
-        return 0.0;
+        return null;
+      }
+      if (numericVal != null) {
+        // Optimization for non-null case.
+        return numericVal;
+      }
+      Number rv;
+      Long v = GuavaUtils.tryParseLong(value);
+      // Do NOT use ternary operator here, because it makes Java to convert Long to Double
+      if (v != null) {
+        rv = v;
+      } else {
+        rv = Doubles.tryParse(value);
       }
 
-      final Double theDouble = Doubles.tryParse(value);
-      return theDouble == null ? 0.0 : theDouble;
+      numericVal = rv;
+      return rv;
+    }
+
+    @Override
+    public boolean isNumericNull()
+    {
+      return asNumber() == null;
     }
 
     @Override
@@ -280,9 +322,9 @@ public abstract class ExprEval<T>
     {
       switch (castTo) {
         case DOUBLE:
-          return ExprEval.of(asDouble());
+          return ExprEval.ofDouble(asNumber());
         case LONG:
-          return ExprEval.of(asLong());
+          return ExprEval.ofLong(asNumber());
         case STRING:
           return this;
       }

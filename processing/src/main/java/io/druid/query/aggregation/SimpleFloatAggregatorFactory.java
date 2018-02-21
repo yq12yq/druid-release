@@ -23,15 +23,16 @@ package io.druid.query.aggregation;
 import com.google.common.base.Preconditions;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
-import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
+public abstract class SimpleFloatAggregatorFactory extends NullableAggregatorFactory
 {
   protected final String name;
   protected final String fieldName;
@@ -56,7 +57,7 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
     );
   }
 
-  BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
+  ColumnValueSelector makeColumnValueSelectorWithFloatDefault(
       ColumnSelectorFactory metricFactory,
       float nullValue
   )
@@ -87,7 +88,7 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public int getMaxIntermediateSize()
+  public int getMaxIntermediateSize2()
   {
     return Float.BYTES;
   }
@@ -99,7 +100,8 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

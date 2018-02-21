@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -502,117 +503,82 @@ public class IncrementalIndexStorageAdapterTest
         null
     );
     final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
-
     Sequences.toList(
-        Sequences.map(
-            cursors,
-            new Function<Cursor, Object>()
-            {
-              @Nullable
-              @Override
-              public Object apply(Cursor cursor)
-              {
-                DimensionSelector dimSelector1A = cursor
-                    .getColumnSelectorFactory()
-                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
-                int cardinalityA = dimSelector1A.getValueCardinality();
+        cursors
+        .map(cursor -> {
+          DimensionSelector dimSelector1A = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
+          int cardinalityA = dimSelector1A.getValueCardinality();
 
-                //index gets more rows at this point, while other thread is iterating over the cursor
-                try {
-                  index.add(
-                      new MapBasedInputRow(
-                          timestamp,
-                          Lists.newArrayList("billy"),
-                          ImmutableMap.<String, Object>of("billy", "v1")
-                      )
-                  );
-                }
-                catch (Exception ex) {
-                  throw new RuntimeException(ex);
-                }
+          //index gets more rows at this point, while other thread is iterating over the cursor
+          try {
+            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v1")));
+          }
+          catch (Exception ex) {
+            throw new RuntimeException(ex);
+          }
 
-                DimensionSelector dimSelector1B = cursor
-                    .getColumnSelectorFactory()
-                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
-                //index gets more rows at this point, while other thread is iterating over the cursor
-                try {
-                  index.add(
-                      new MapBasedInputRow(
-                          timestamp,
-                          Lists.newArrayList("billy"),
-                          ImmutableMap.<String, Object>of("billy", "v2")
-                      )
-                  );
-                  index.add(
-                      new MapBasedInputRow(
-                          timestamp,
-                          Lists.newArrayList("billy2"),
-                          ImmutableMap.<String, Object>of("billy2", "v3")
-                      )
-                  );
-                }
-                catch (Exception ex) {
-                  throw new RuntimeException(ex);
-                }
+          DimensionSelector dimSelector1B = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
+          //index gets more rows at this point, while other thread is iterating over the cursor
+          try {
+            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v2")));
+            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy2"), ImmutableMap.of("billy2", "v3")));
+          }
+          catch (Exception ex) {
+            throw new RuntimeException(ex);
+          }
 
-                DimensionSelector dimSelector1C = cursor
-                    .getColumnSelectorFactory()
-                    .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
+          DimensionSelector dimSelector1C = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
 
-                DimensionSelector dimSelector2D = cursor
-                    .getColumnSelectorFactory()
-                    .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
-                //index gets more rows at this point, while other thread is iterating over the cursor
-                try {
-                  index.add(
-                      new MapBasedInputRow(
-                          timestamp,
-                          Lists.newArrayList("billy"),
-                          ImmutableMap.<String, Object>of("billy", "v3")
-                      )
-                  );
-                  index.add(
-                      new MapBasedInputRow(
-                          timestamp,
-                          Lists.newArrayList("billy3"),
-                          ImmutableMap.<String, Object>of("billy3", "")
-                      )
-                  );
-                }
-                catch (Exception ex) {
-                  throw new RuntimeException(ex);
-                }
+          DimensionSelector dimSelector2D = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
+          //index gets more rows at this point, while other thread is iterating over the cursor
+          try {
+            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy"), ImmutableMap.of("billy", "v3")));
+            index.add(new MapBasedInputRow(timestamp, Lists.newArrayList("billy3"), ImmutableMap.of("billy3", "")));
+          }
+          catch (Exception ex) {
+            throw new RuntimeException(ex);
+          }
 
-                DimensionSelector dimSelector3E = cursor
-                    .getColumnSelectorFactory()
-                    .makeDimensionSelector(new DefaultDimensionSpec("billy3", "billy3"));
+          DimensionSelector dimSelector3E = cursor
+              .getColumnSelectorFactory()
+              .makeDimensionSelector(new DefaultDimensionSpec("billy3", "billy3"));
 
-                int rowNumInCursor = 0;
-                // and then, cursoring continues in the other thread
-                while (!cursor.isDone()) {
-                  IndexedInts rowA = dimSelector1A.getRow();
-                  rowA.forEach(i -> Assert.assertTrue(i < cardinalityA));
-                  IndexedInts rowB = dimSelector1B.getRow();
-                  rowB.forEach(i -> Assert.assertTrue(i < cardinalityA));
-                  IndexedInts rowC = dimSelector1C.getRow();
-                  rowC.forEach(i -> Assert.assertTrue(i < cardinalityA));
-                  IndexedInts rowD = dimSelector2D.getRow();
-                  // no null id, so should get empty dims array
-                  Assert.assertEquals(0, rowD.size());
-                  IndexedInts rowE = dimSelector3E.getRow();
-                  Assert.assertEquals(1, rowE.size());
-                  // the null id
-                  Assert.assertEquals(0, rowE.get(0));
-                  cursor.advance();
-                  rowNumInCursor++;
-                }
-                Assert.assertEquals(2, rowNumInCursor);
-                assertCursorsNotEmpty.incrementAndGet();
-
-                return null;
-              }
+          int rowNumInCursor = 0;
+          // and then, cursoring continues in the other thread
+          while (!cursor.isDone()) {
+            IndexedInts rowA = dimSelector1A.getRow();
+            rowA.forEach(i -> Assert.assertTrue(i < cardinalityA));
+            IndexedInts rowB = dimSelector1B.getRow();
+            rowB.forEach(i -> Assert.assertTrue(i < cardinalityA));
+            IndexedInts rowC = dimSelector1C.getRow();
+            rowC.forEach(i -> Assert.assertTrue(i < cardinalityA));
+            IndexedInts rowD = dimSelector2D.getRow();
+            // no null id, so should get empty dims array
+            Assert.assertEquals(0, rowD.size());
+            IndexedInts rowE = dimSelector3E.getRow();
+            if (NullHandling.replaceWithDefault()) {
+              Assert.assertEquals(1, rowE.size());
+              // the null id
+              Assert.assertEquals(0, rowE.get(0));
+            } else {
+              Assert.assertEquals(0, rowE.size());
             }
-        ),
+            cursor.advance();
+            rowNumInCursor++;
+          }
+          Assert.assertEquals(2, rowNumInCursor);
+          assertCursorsNotEmpty.incrementAndGet();
+
+          return null;
+        }),
         new ArrayList<>()
     );
     Assert.assertEquals(1, assertCursorsNotEmpty.get());

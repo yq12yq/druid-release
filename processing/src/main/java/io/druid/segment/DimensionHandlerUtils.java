@@ -238,6 +238,15 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
+  public static String convertObjectToString(@Nullable Object valObj)
+  {
+    if (valObj == null) {
+      return null;
+    }
+    return valObj.toString();
+  }
+
+  @Nullable
   public static Long convertObjectToLong(@Nullable Object valObj)
   {
     return convertObjectToLong(valObj, false);
@@ -247,7 +256,7 @@ public final class DimensionHandlerUtils
   public static Long convertObjectToLong(@Nullable Object valObj, boolean reportParseExceptions)
   {
     if (valObj == null) {
-      return ZERO_LONG;
+      return null;
     }
 
     if (valObj instanceof Long) {
@@ -275,7 +284,7 @@ public final class DimensionHandlerUtils
   public static Float convertObjectToFloat(@Nullable Object valObj, boolean reportParseExceptions)
   {
     if (valObj == null) {
-      return ZERO_FLOAT;
+      return null;
     }
 
     if (valObj instanceof Float) {
@@ -303,7 +312,7 @@ public final class DimensionHandlerUtils
   public static Double convertObjectToDouble(@Nullable Object valObj, boolean reportParseExceptions)
   {
     if (valObj == null) {
-      return ZERO_DOUBLE;
+      return null;
     }
 
     if (valObj instanceof Double) {
@@ -370,5 +379,10 @@ public final class DimensionHandlerUtils
   public static Float nullToZero(@Nullable Float number)
   {
     return number == null ? ZERO_FLOAT : number;
+  }
+
+  public static Number nullToZero(@Nullable Number number)
+  {
+    return number == null ? ZERO_DOUBLE : number;
   }
 }

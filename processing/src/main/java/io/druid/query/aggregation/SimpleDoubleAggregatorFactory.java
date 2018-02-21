@@ -24,16 +24,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
-import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.Column;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
+public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFactory
 {
   protected final String name;
   protected final String fieldName;
@@ -60,7 +61,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
     );
   }
 
-  protected BaseDoubleColumnValueSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory, double nullValue)
+  protected ColumnValueSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory, double nullValue)
   {
     return AggregatorUtil.makeColumnValueSelectorWithDoubleDefault(
         metricFactory,
@@ -91,7 +92,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public int getMaxIntermediateSize()
+  public int getMaxIntermediateSize2()
   {
     return Double.BYTES;
   }
@@ -152,7 +153,8 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object finalizeComputation(Object object)
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }
