@@ -61,11 +61,14 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
   private final ServerConfig serverConfig;
 
+  private final AuthConfig authConfig;
+
   @Inject
-  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig)
+  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig, AuthConfig authConfig)
   {
     this.extensionHandlers = ImmutableList.copyOf(extensionHandlers);
     this.serverConfig = serverConfig;
+    this.authConfig = authConfig;
   }
 
   @Override
@@ -97,6 +100,7 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);

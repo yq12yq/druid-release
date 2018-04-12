@@ -37,6 +37,7 @@ import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.sql.avatica.DruidAvaticaHandler;
+
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -62,15 +63,19 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
   private final AsyncQueryForwardingServlet asyncQueryForwardingServlet;
   private final DruidHttpClientConfig httpClientConfig;
+  private final AuthConfig authConfig;
+
 
   @Inject
   public RouterJettyServerInitializer(
       @Router DruidHttpClientConfig httpClientConfig,
-      AsyncQueryForwardingServlet asyncQueryForwardingServlet
+      AsyncQueryForwardingServlet asyncQueryForwardingServlet,
+      AuthConfig authConfig
   )
   {
     this.httpClientConfig = httpClientConfig;
     this.asyncQueryForwardingServlet = asyncQueryForwardingServlet;
+    this.authConfig = authConfig;
   }
 
   @Override
@@ -101,6 +106,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
