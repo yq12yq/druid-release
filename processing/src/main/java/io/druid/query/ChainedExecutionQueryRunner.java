@@ -19,7 +19,6 @@
 
 package io.druid.query;
 
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -32,7 +31,6 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.MergeIterable;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.Arrays;
@@ -95,7 +93,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
     final int priority = QueryContexts.getPriority(query);
     final Ordering ordering = query.getResultOrdering();
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
-    return new BaseSequence<T, Iterator<T>>(
+    return new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
           @Override
@@ -106,45 +104,40 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                 Lists.newArrayList(
                     Iterables.transform(
                         queryables,
-                        new Function<QueryRunner<T>, ListenableFuture<Iterable<T>>>()
-                        {
-                          @Override
-                          public ListenableFuture<Iterable<T>> apply(final QueryRunner<T> input)
-                          {
-                            if (input == null) {
-                              throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
-                            }
+                        input -> {
+                          if (input == null) {
+                            throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
+                          }
 
-                            return exec.submit(
-                                new AbstractPrioritizedCallable<Iterable<T>>(priority)
+                          return exec.submit(
+                              new AbstractPrioritizedCallable<Iterable<T>>(priority)
+                              {
+                                @Override
+                                public Iterable<T> call()
                                 {
-                                  @Override
-                                  public Iterable<T> call() throws Exception
-                                  {
-                                    try {
-                                      Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
-                                      if (result == null) {
-                                        throw new ISE("Got a null result! Segments are missing!");
-                                      }
+                                  try {
+                                    Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
+                                    if (result == null) {
+                                      throw new ISE("Got a null result! Segments are missing!");
+                                    }
 
-                                      List<T> retVal = Sequences.toList(result, Lists.<T>newArrayList());
-                                      if (retVal == null) {
-                                        throw new ISE("Got a null list of results! WTF?!");
-                                      }
+                                    List<T> retVal = result.toList();
+                                    if (retVal == null) {
+                                      throw new ISE("Got a null list of results! WTF?!");
+                                    }
 
-                                      return retVal;
-                                    }
-                                    catch (QueryInterruptedException e) {
-                                      throw Throwables.propagate(e);
-                                    }
-                                    catch (Exception e) {
-                                      log.error(e, "Exception with one of the sequences!");
-                                      throw Throwables.propagate(e);
-                                    }
+                                    return retVal;
+                                  }
+                                  catch (QueryInterruptedException e) {
+                                    throw Throwables.propagate(e);
+                                  }
+                                  catch (Exception e) {
+                                    log.error(e, "Exception with one of the sequences!");
+                                    throw Throwables.propagate(e);
                                   }
                                 }
-                            );
-                          }
+                              }
+                          );
                         }
                     )
                 )
@@ -156,8 +149,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               return new MergeIterable<>(
                   ordering.nullsFirst(),
                   QueryContexts.hasTimeout(query) ?
-                      futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
-                      futures.get()
+                  futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
+                  futures.get()
               ).iterator();
             }
             catch (InterruptedException e) {

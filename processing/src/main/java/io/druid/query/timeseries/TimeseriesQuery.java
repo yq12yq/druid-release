@@ -45,6 +45,9 @@ import java.util.Objects;
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
+
+  public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
+
   private final VirtualColumns virtualColumns;
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
@@ -119,7 +122,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public boolean isSkipEmptyBuckets()
   {
-    return getContextBoolean("skipEmptyBuckets", false);
+    return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
   }
 
   @Override

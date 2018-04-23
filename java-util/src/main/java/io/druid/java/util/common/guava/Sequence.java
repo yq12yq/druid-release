@@ -22,6 +22,8 @@ package io.druid.java.util.common.guava;
 import com.google.common.collect.Ordering;
 
 import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
@@ -92,5 +94,10 @@ public interface Sequence<T>
   default Sequence<T> withBaggage(Closeable baggage)
   {
     return Sequences.withBaggage(this, baggage);
+  }
+
+  default List<T> toList()
+  {
+    return accumulate(new ArrayList<>(), Accumulators.list());
   }
 }

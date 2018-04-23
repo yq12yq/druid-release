@@ -27,8 +27,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import io.druid.data.input.MapBasedRow;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
@@ -39,13 +43,16 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
+import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -88,7 +95,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       QueryRunner<Result<TimeseriesResultValue>> queryRunner
   )
   {
-    return new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(queryRunner)
+    final ResultMergeQueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(
+        queryRunner)
     {
       @Override
       public Sequence<Result<TimeseriesResultValue>> doRun(
@@ -125,6 +133,51 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         );
       }
     };
+
+    return (queryPlus, responseContext) -> {
+      final TimeseriesQuery query = (TimeseriesQuery) queryPlus.getQuery();
+      final Sequence<Result<TimeseriesResultValue>> baseResults = resultMergeQueryRunner.run(
+          queryPlus.withQuery(
+              queryPlus.getQuery()),
+          responseContext
+      );
+
+      final Sequence<Result<TimeseriesResultValue>> finalSequence;
+
+      if (query.getGranularity().equals(Granularities.ALL) && !query.isSkipEmptyBuckets()) {
+        //Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus we have only one record
+        final List<Result<TimeseriesResultValue>> val = baseResults.toList();
+        finalSequence = val.isEmpty() ? Sequences.simple(Collections.singletonList(
+            getNullTimeseriesResultValue(query))) : Sequences.simple(val);
+      } else {
+        finalSequence = baseResults;
+      }
+
+      return finalSequence;
+
+    };
+  }
+
+  private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
+  {
+    List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
+    Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
+    String[] aggregatorNames = new String[aggregatorSpecs.size()];
+    for (int i = 0; i < aggregatorSpecs.size(); i++) {
+      aggregators[i] = aggregatorSpecs.get(i)
+                                      .factorize(RowBasedColumnSelectorFactory.create(() -> new MapBasedRow(
+                                          null,
+                                          null
+                                      ), null));
+      aggregatorNames[i] = aggregatorSpecs.get(i).getName();
+    }
+    final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
+    TimeseriesResultBuilder bob = new TimeseriesResultBuilder(start);
+    for (int i = 0; i < aggregatorSpecs.size(); i++) {
+      bob.addMetric(aggregatorNames[i], aggregators[i]);
+      aggregators[i].close();
+    }
+    return bob.build();
   }
 
   @Override
@@ -217,7 +270,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
               retVal.put(factory.getName(), factory.deserialize(resultIter.next()));
             }
 
-            return new Result<TimeseriesResultValue>(
+            return new Result<>(
                 timestamp,
                 new TimeseriesResultValue(retVal)
             );
@@ -231,20 +284,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(final QueryRunner<Result<TimeseriesResultValue>> runner)
   {
     return intervalChunkingQueryRunnerDecorator.decorate(
-        new QueryRunner<Result<TimeseriesResultValue>>()
-        {
-          @Override
-          public Sequence<Result<TimeseriesResultValue>> run(
-              QueryPlus<Result<TimeseriesResultValue>> queryPlus, Map<String, Object> responseContext
-          )
-          {
-            TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
-            if (timeseriesQuery.getDimensionsFilter() != null) {
-              timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
-              queryPlus = queryPlus.withQuery(timeseriesQuery);
-            }
-            return runner.run(queryPlus, responseContext);
+        (queryPlus, responseContext) -> {
+          TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
+          if (timeseriesQuery.getDimensionsFilter() != null) {
+            timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
+            queryPlus = queryPlus.withQuery(timeseriesQuery);
           }
+          return runner.run(queryPlus, responseContext);
         }, this);
   }
 
@@ -268,31 +314,26 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       final TimeseriesQuery query, final MetricManipulationFn fn, final boolean calculatePostAggs
   )
   {
-    return new Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>>()
-    {
-      @Override
-      public Result<TimeseriesResultValue> apply(Result<TimeseriesResultValue> result)
-      {
-        final TimeseriesResultValue holder = result.getValue();
-        final Map<String, Object> values = Maps.newHashMap(holder.getBaseObject());
-        if (calculatePostAggs && !query.getPostAggregatorSpecs().isEmpty()) {
-          // put non finalized aggregators for calculating dependent post Aggregators
-          for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-            values.put(agg.getName(), holder.getMetric(agg.getName()));
-          }
-          for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-            values.put(postAgg.getName(), postAgg.compute(values));
-          }
-        }
+    return result -> {
+      final TimeseriesResultValue holder = result.getValue();
+      final Map<String, Object> values = Maps.newHashMap(holder.getBaseObject());
+      if (calculatePostAggs && !query.getPostAggregatorSpecs().isEmpty()) {
+        // put non finalized aggregators for calculating dependent post Aggregators
         for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-          values.put(agg.getName(), fn.manipulate(agg, holder.getMetric(agg.getName())));
+          values.put(agg.getName(), holder.getMetric(agg.getName()));
         }
-
-        return new Result<TimeseriesResultValue>(
-            result.getTimestamp(),
-            new TimeseriesResultValue(values)
-        );
+        for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+          values.put(postAgg.getName(), postAgg.compute(values));
+        }
       }
+      for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+        values.put(agg.getName(), fn.manipulate(agg, holder.getMetric(agg.getName())));
+      }
+
+      return new Result<>(
+          result.getTimestamp(),
+          new TimeseriesResultValue(values)
+      );
     };
   }
 }
