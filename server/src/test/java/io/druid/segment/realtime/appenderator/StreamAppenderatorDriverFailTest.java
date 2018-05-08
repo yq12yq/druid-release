@@ -354,15 +354,13 @@ public class StreamAppenderatorDriverFailTest
     }
 
     @Override
-    public ListenableFuture<Object> persist(
-        Collection<SegmentIdentifier> identifiers, Committer committer
-    )
+    public ListenableFuture<Object> persistAll(Committer committer)
     {
       if (persistEnabled) {
         // do nothing
         return Futures.immediateFuture(committer.getMetadata());
       } else {
-        return Futures.immediateFailedFuture(new ISE("Fail test while persisting segments[%s]", identifiers));
+        return Futures.immediateFailedFuture(new ISE("Fail test while persisting segments[%s]", rows.keySet()));
       }
     }
 
@@ -388,7 +386,7 @@ public class StreamAppenderatorDriverFailTest
                                                       )
                                                       .collect(Collectors.toList());
         return Futures.transform(
-            persist(identifiers, committer),
+            persistAll(committer),
             (Function<Object, SegmentsAndMetadata>) commitMetadata -> new SegmentsAndMetadata(segments, commitMetadata)
         );
       } else {
