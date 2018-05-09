@@ -75,6 +75,6 @@ class DoublesColumnWithNulls extends DoublesColumn
   public double getDoubleSingleValueRow(int rowNum)
   {
     assert !isNull(rowNum);
-    return super.getLongSingleValueRow(rowNum);
+    return super.getDoubleSingleValueRow(rowNum);
   }
 }
