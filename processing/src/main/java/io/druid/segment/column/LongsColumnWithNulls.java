@@ -52,6 +52,12 @@ class LongsColumnWithNulls extends LongsColumn
   }
 
   @Override
+  public boolean isNull(int rowNum)
+  {
+    return nullValueBitmap.get(rowNum);
+  }
+
+  @Override
   public float getFloatSingleValueRow(int rowNum)
   {
     assert !isNull(rowNum);
