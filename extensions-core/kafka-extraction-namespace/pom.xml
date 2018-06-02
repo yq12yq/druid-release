@@ -31,7 +31,9 @@
     <version>0.12.1-rc3-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
-
+  <properties>
+    <apache.kafka.version>0.10.2.0</apache.kafka.version>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>io.druid</groupId>
@@ -58,26 +60,19 @@
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.10</artifactId>
-      <version>0.8.2.1</version>
+      <artifactId>kafka_2.11</artifactId>
+      <version>${apache.kafka.version}</version>
       <exclusions>
         <exclusion>
-          <groupId>log4j</groupId>
-          <artifactId>log4j</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.zookeeper</groupId>
-          <artifactId>zookeeper</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>net.jpountz.lz4</groupId>
-          <artifactId>lz4</artifactId>
+          <groupId>org.scala-lang</groupId>
+          <artifactId>scala-library</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>2.11.12</version>
     </dependency>
 
     <!-- Tests -->
@@ -122,6 +117,13 @@
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-api-easymock</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka_2.11</artifactId>
+      <version>${apache.kafka.version}</version>
+      <classifier>test</classifier>
       <scope>test</scope>
     </dependency>
   </dependencies>

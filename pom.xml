@@ -51,7 +51,7 @@
 
     <scm>
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
-       <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection> 
+       <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
         <tag>0.12.0-SNAPSHOT</tag>
     </scm>
@@ -67,7 +67,7 @@
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
         <jersey.version>1.19.3</jersey.version>
-        <!-- Cannot upgrade to 2.9.4 due to https://github.com/FasterXML/jackson-databind/issues/1565 --> 
+        <!-- Cannot upgrade to 2.9.4 due to https://github.com/FasterXML/jackson-databind/issues/1565 -->
         <jackson.version>2.6.7</jackson.version>
         <log4j.version>2.5</log4j.version>
         <!-- HttpClient has not yet been ported to Netty 4.x -->
@@ -114,7 +114,6 @@
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
-        <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
@@ -126,6 +125,7 @@
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/kafka-eight</module>
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/druid-rocketmq</module>

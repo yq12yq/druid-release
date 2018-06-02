@@ -35,16 +35,19 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.lookup.namespace.NamespaceExtractionModule;
 import kafka.admin.AdminUtils;
+import kafka.admin.RackAwareMode;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import kafka.utils.Time;
 import kafka.utils.ZKStringSerializer$;
+import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.ZkConnection;
 import org.I0Itec.zkclient.exception.ZkException;
 import org.apache.curator.test.TestingServer;
+import org.apache.kafka.common.utils.Time;
 import org.apache.zookeeper.CreateMode;
 import org.junit.After;
 import org.junit.Assert;
@@ -52,6 +55,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import scala.Some;
+import scala.collection.immutable.List$;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -147,6 +152,12 @@ public class TestKafkaExtractionCluster
           }
 
           @Override
+          public long hiResClockMs()
+          {
+            return 0;
+          }
+
+          @Override
           public long nanoseconds()
           {
             return milliseconds() * 1_000_000;
@@ -162,7 +173,9 @@ public class TestKafkaExtractionCluster
               throw Throwables.propagate(e);
             }
           }
-        }
+        },
+        Some.apply("TestingBroker"),
+        List$.MODULE$.empty()
     );
     kafkaServer.startup();
     closer.register(new Closeable()
@@ -191,6 +204,7 @@ public class TestKafkaExtractionCluster
         ZKStringSerializer$.MODULE$
     );
 
+    ZkUtils zkUtils = new ZkUtils(zkClient, new ZkConnection(zkTestServer.getConnectString(), 10000), false);
     try (final AutoCloseable autoCloseable = new AutoCloseable()
     {
       @Override
@@ -209,13 +223,13 @@ public class TestKafkaExtractionCluster
     }) {
       final Properties topicProperties = new Properties();
       topicProperties.put("cleanup.policy", "compact");
-      if (!AdminUtils.topicExists(zkClient, topicName)) {
-        AdminUtils.createTopic(zkClient, topicName, 1, 1, topicProperties);
+      if (!AdminUtils.topicExists(zkUtils, topicName)) {
+        AdminUtils.createTopic(zkUtils, topicName, 1, 1, topicProperties, RackAwareMode.Disabled$.MODULE$);
       }
 
       log.info("---------------------------Created topic---------------------------");
 
-      Assert.assertTrue(AdminUtils.topicExists(zkClient, topicName));
+      Assert.assertTrue(AdminUtils.topicExists(zkUtils, topicName));
     }
 
     final Properties kafkaProducerProperties = makeProducerProperties();
@@ -301,7 +315,7 @@ public class TestKafkaExtractionCluster
     kafkaProducerProperties.putAll(kafkaProperties);
     kafkaProducerProperties.put(
         "metadata.broker.list",
-        StringUtils.format("127.0.0.1:%d", kafkaServer.socketServer().port())
+        StringUtils.format("127.0.0.1:%d", kafkaServer.socketServer().config().port())
     );
     kafkaProperties.put("request.required.acks", "1");
     return kafkaProducerProperties;
