@@ -103,9 +103,9 @@ public class ExpressionSelectors
       @Override
       public Object getObject()
       {
-        // No need for null check on getObject() since baseSelector impls will never return null.
-        //noinspection ConstantConditions
-        return baseSelector.getObject().value();
+        // Returned value can be null when underlying implementation is NilColumnValueSelector
+        ExprEval object = baseSelector.getObject();
+        return object == null ? null : object.value();
       }
 
       @Override
