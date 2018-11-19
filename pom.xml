@@ -25,7 +25,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.10.1.2.6.5.0-SNAPSHOT</version>
+    <version>0.10.1.2.6.5.80-1</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -60,7 +60,7 @@
         <apache.curator.version>2.11.0</apache.curator.version>
         <avatica.version>1.9.0</avatica.version>
         <calcite.version>1.12.0</calcite.version>
-        <zookeeper.version>3.4.6.2.6.5.0-SNAPSHOT</zookeeper.version>
+        <zookeeper.version>3.4.6.2.6.5.80-1</zookeeper.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
@@ -71,7 +71,7 @@
         <netty.version>4.1.11.Final</netty.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
-        <hadoop.compile.version>2.7.3.2.6.5.0-SNAPSHOT</hadoop.compile.version>
+        <hadoop.compile.version>2.7.3.2.6.5.80-1</hadoop.compile.version>
         <hive.version>2.1.0</hive.version>
         <powermock.version>1.6.6</powermock.version>
         <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
